@@ -1,0 +1,20 @@
+export const mockUser = {
+  id: 'u1',
+  name: 'Aarav Sharma',
+  email: 'aarav.sharma@example.com',
+  phone: '+977-9841234567',
+  avatar: null,
+  ward: 'Ward 31',
+  address: 'Durbar Marg, Kathmandu',
+  role: 'citizen',
+  reportCount: 12,
+  upvotesReceived: 87,
+  joinedAt: '2025-08-15T10:00:00Z',
+  isVerified: true,
+  notifications: {
+    email: true,
+    push: true,
+    statusUpdates: true,
+    comments: true,
+  },
+};

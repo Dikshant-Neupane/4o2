@@ -1,0 +1,42 @@
+export const mockCategories = [
+  {
+    id: 'road_damage',
+    label: 'Road Damage',
+    description: 'Potholes, cracks, broken sidewalks, damaged road signs, and other road surface issues.',
+    icon: 'Construction',
+    color: '#DC2626',
+    reportCount: 128,
+  },
+  {
+    id: 'electrical',
+    label: 'Electrical Issues',
+    description: 'Broken street lights, exposed wiring, non-functional traffic signals, and electrical hazards.',
+    icon: 'Zap',
+    color: '#F59E0B',
+    reportCount: 64,
+  },
+  {
+    id: 'water_sanitation',
+    label: 'Water & Sanitation',
+    description: 'Water leaks, pipe bursts, drainage blockages, sewage overflow, and water quality issues.',
+    icon: 'Droplets',
+    color: '#3B82F6',
+    reportCount: 89,
+  },
+  {
+    id: 'waste_management',
+    label: 'Waste Management',
+    description: 'Garbage overflow, missed collection, illegal dumping, recycling issues, and waste bin damage.',
+    icon: 'Trash2',
+    color: '#22C55E',
+    reportCount: 156,
+  },
+  {
+    id: 'public_space',
+    label: 'Public Spaces',
+    description: 'Park vandalism, damaged public property, graffiti, broken playground equipment, and public facility issues.',
+    icon: 'Trees',
+    color: '#8B5CF6',
+    reportCount: 42,
+  },
+];
