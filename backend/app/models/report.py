@@ -31,6 +31,11 @@ class Report(Base):
     ai_severity = Column(String(20), nullable=True)
     ai_severity_confidence = Column(Float, nullable=True)
     ai_bounding_box_json = Column(Text, nullable=True)
+    width_cm = Column(Float, nullable=True)
+    depth_cm = Column(Float, nullable=True)
+    area_sqm = Column(Float, nullable=True)
+    road_type = Column(String(50), nullable=True)
+    weather = Column(String(50), nullable=True)
 
     # Scoring
     priority_score = Column(Float, default=0.0)

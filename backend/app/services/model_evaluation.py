@@ -3,7 +3,7 @@ Model evaluation service — metrics computation, confusion matrix, and plot gen
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import matplotlib
 matplotlib.use("Agg")  # Non-interactive backend for server use
@@ -35,12 +35,12 @@ class ModelEvaluator:
         self.model.eval()
 
         # Stores from last evaluation
-        self.all_preds: List[int] = []
-        self.all_labels: List[int] = []
-        self.all_probs: List[float] = []
+        self.all_preds: list[int] = []
+        self.all_labels: list[int] = []
+        self.all_probs: list[float] = []
 
     # ── Core Evaluation ─────────────────────────────────────────
-    def evaluate(self, dataloader: DataLoader) -> Dict[str, Any]:
+    def evaluate(self, dataloader: DataLoader) -> dict[str, Any]:
         """
         Run the model on a DataLoader and compute all metrics.
 
@@ -75,7 +75,7 @@ class ModelEvaluator:
         )
         return metrics
 
-    def _compute_metrics(self) -> Dict[str, Any]:
+    def _compute_metrics(self) -> dict[str, Any]:
         """Compute classification metrics from stored predictions."""
         y_true = self.all_labels
         y_pred = self.all_preds
@@ -127,10 +127,10 @@ class ModelEvaluator:
 
     def plot_training_history(
         self,
-        train_losses: List[float],
-        val_losses: List[float],
-        train_accs: List[float],
-        val_accs: List[float],
+        train_losses: list[float],
+        val_losses: list[float],
+        train_accs: list[float],
+        val_accs: list[float],
         save_dir: str,
     ) -> str:
         """Generate and save training history plots (loss + accuracy curves)."""
@@ -170,8 +170,8 @@ class ModelEvaluator:
 
 # ── Standalone Metric Computation ───────────────────────────────
 def compute_metrics_from_arrays(
-    y_true: List[int], y_pred: List[int]
-) -> Dict[str, Any]:
+    y_true: list[int], y_pred: list[int]
+) -> dict[str, Any]:
     """Compute metrics from raw label arrays (useful for sklearn models)."""
     return {
         "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),

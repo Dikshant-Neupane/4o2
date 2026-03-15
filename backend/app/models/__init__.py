@@ -11,5 +11,3 @@ __all__ = [
     "Dataset", "TrainingRun",
     "User", "Department", "Report", "Vote", "Comment",
 ]
-
-print("[PHASE 2] ✅ All DB models defined: users, departments, reports, votes, comments")

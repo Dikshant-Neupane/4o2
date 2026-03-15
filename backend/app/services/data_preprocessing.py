@@ -8,7 +8,7 @@ applying transforms, and creating train/val/test DataLoaders.
 import os
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,8 @@ class PotholeDataset(Dataset):
 
     def __init__(
         self,
-        image_paths: List[str],
-        labels: List[int],
+        image_paths: list[str],
+        labels: list[int],
         transform: Optional[transforms.Compose] = None,
     ):
         self.image_paths = image_paths
@@ -44,7 +44,7 @@ class PotholeDataset(Dataset):
     def __len__(self) -> int:
         return len(self.image_paths)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
         img_path = self.image_paths[idx]
         label = self.labels[idx]
 
@@ -107,8 +107,8 @@ class ImagePreprocessor:
         self.batch_size = batch_size
         self.seed = seed
 
-        self.image_paths: List[str] = []
-        self.labels: List[int] = []
+        self.image_paths: list[str] = []
+        self.labels: list[int] = []
         self.class_names = ["normal", "pothole"]
 
     # ── Loading ─────────────────────────────────────────────────
@@ -144,7 +144,7 @@ class ImagePreprocessor:
         )
         return self
 
-    def _scan_images(self, directory: Path) -> List[Path]:
+    def _scan_images(self, directory: Path) -> list[Path]:
         """Recursively find all supported image files."""
         images = []
         for f in sorted(directory.rglob("*")):
@@ -158,7 +158,7 @@ class ImagePreprocessor:
                     logger.warning("Skipping corrupt image: {}", f)
         return images
 
-    def _generate_negatives(self, count: int) -> List[str]:
+    def _generate_negatives(self, count: int) -> list[str]:
         """Generate synthetic negative (non-pothole) images."""
         neg_dir = self.data_dir / "_synthetic_negatives"
         neg_dir.mkdir(parents=True, exist_ok=True)
@@ -190,7 +190,7 @@ class ImagePreprocessor:
     # ── Splitting ───────────────────────────────────────────────
     def split_data(
         self,
-    ) -> Tuple[List[str], List[str], List[str], List[int], List[int], List[int]]:
+    ) -> tuple[list[str], list[str], list[str], list[int], list[int], list[int]]:
         """Split into train/val/test sets with stratification."""
         if not self.image_paths:
             raise ValueError("No images loaded. Call load_images() first.")
@@ -224,7 +224,7 @@ class ImagePreprocessor:
     # ── DataLoaders ─────────────────────────────────────────────
     def create_dataloaders(
         self,
-    ) -> Dict[str, DataLoader]:
+    ) -> dict[str, DataLoader]:
         """Create train/val/test DataLoaders."""
         X_train, X_val, X_test, y_train, y_val, y_test = self.split_data()
 

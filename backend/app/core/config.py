@@ -3,7 +3,6 @@ Application configuration — loads values from .env using pydantic-settings.
 """
 
 from pathlib import Path
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,15 +20,11 @@ class Settings(BaseSettings):
     # ── Application ─────────────────────────────────────────────
     app_name: str = "AI-Pothole-Detection"
     app_version: str = "1.0.0"
-    debug: bool = True
+    debug: bool = False
     secret_key: str = "change-me-in-production"
 
-    # ── Google OAuth ───────────────────────────────────────────
-    google_client_id: str = ""
-    google_client_secret: str = ""
-
     # ── JWT ─────────────────────────────────────────────────────
-    jwt_secret_key: str = "civiceye-jwt-secret-min-32-chars-long"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
 
@@ -37,7 +32,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
     @property
-    def cors_origin_list(self) -> List[str]:
+    def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     # ── Database ────────────────────────────────────────────────

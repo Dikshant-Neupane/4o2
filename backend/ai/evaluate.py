@@ -11,7 +11,7 @@ Runs the validation set through a trained model and produces:
 import json
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import numpy as np
 from loguru import logger
@@ -44,11 +44,11 @@ class YOLOEvaluator:
 
         from ultralytics import YOLO
         self.model = YOLO(str(self.model_path))
-        self._metrics: Optional[Dict] = None
+        self._metrics: Optional[dict] = None
         self._results = None
 
     # ── Public API ─────────────────────────────────────────────
-    def evaluate(self, data_yaml: str = None, split: str = "test", imgsz: int = 640) -> Dict:
+    def evaluate(self, data_yaml: str = None, split: str = "test", imgsz: int = 640) -> dict:
         """
         Run model validation and compute all metrics.
 

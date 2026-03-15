@@ -3,7 +3,7 @@ Inference service — load trained models and run predictions.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 from loguru import logger
@@ -59,7 +59,7 @@ class InferenceService:
         self,
         image_path: str,
         version: Optional[int] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run inference on a single image.
 
@@ -110,7 +110,7 @@ class InferenceService:
         self,
         image_bytes: bytes,
         version: Optional[int] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run inference from raw image bytes (e.g., from file upload).
 
@@ -133,7 +133,7 @@ class InferenceService:
             os.remove(temp_path)
 
     # ── Status ──────────────────────────────────────────────────
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Return current inference service status."""
         return {
             "model_loaded": self._model is not None,

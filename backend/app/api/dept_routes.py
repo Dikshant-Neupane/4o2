@@ -4,7 +4,7 @@ Department API — list available civic departments/categories.
 Prefix: /api/v1/departments
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -28,7 +28,7 @@ class DepartmentResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/", response_model=List[DepartmentResponse])
+@router.get("/", response_model=list[DepartmentResponse])
 def list_departments(db: Session = Depends(get_db)):
     """Return all departments from DB. Frontend uses this to populate category cards."""
     depts = db.query(Department).all()

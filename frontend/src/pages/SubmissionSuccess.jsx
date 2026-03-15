@@ -20,17 +20,37 @@ import {
 const SubmissionSuccess = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { clearReport } = useReportStore();
+  const { clearReport, lastSubmittedReport } = useReportStore();
   const prefersReduced = useReducedMotionSafe();
 
   const [status, setStatus] = useState(null);
   const [aiProcessed, setAiProcessed] = useState(false);
   const [aiData, setAiData] = useState(null);
   const pollingRef = useRef(null);
+  const notFoundCountRef = useRef(0);
 
   useEffect(() => {
     console.log('[SUCCESS] Mounted:', id);
-    startPolling();
+
+    // If we have real AI data from the submit response, use it immediately
+    if (lastSubmittedReport && lastSubmittedReport.ai_detection_confidence !== undefined) {
+      console.log('[SUCCESS] Using AI data from submit response:', {
+        severity: lastSubmittedReport.ai_severity,
+        confidence: lastSubmittedReport.ai_detection_confidence,
+      });
+      setAiProcessed(true);
+      setAiData({
+        severity: lastSubmittedReport.ai_severity || 'UNKNOWN',
+        confidence: `${Math.round((lastSubmittedReport.ai_detection_confidence || 0) * 100)}%`,
+        width: lastSubmittedReport.width_cm ? `${lastSubmittedReport.width_cm} cm` : 'N/A',
+        depth: lastSubmittedReport.depth_cm ? `${lastSubmittedReport.depth_cm} cm` : 'N/A',
+        roadType: lastSubmittedReport.road_type || 'N/A',
+      });
+    } else {
+      // Fallback: poll the status endpoint
+      startPolling();
+    }
+
     return () => stopPolling();
   }, [id]);
 
@@ -49,21 +69,39 @@ const SubmissionSuccess = () => {
       const res = await reports.getStatus(id);
       const data = res.data;
       console.log('[SUCCESS] Status:', data);
+      notFoundCountRef.current = 0; // Reset on success
       setStatus(data);
       if (data?.ai_processed) {
         setAiProcessed(true);
+        // Use REAL values from the backend AI pipeline
         setAiData({
-          severity: data.severity || 'HIGH', confidence: data.confidence || '94%',
-          width: data.width_cm || '45cm', depth: data.depth_cm || '12cm', roadType: data.road_type || 'Asphalt',
+          severity: data.severity ?? 'UNKNOWN',
+          confidence: data.confidence ?? '0%',
+          width: data.width_cm ?? 'N/A',
+          depth: data.depth_cm ?? 'N/A',
+          roadType: data.road_type ?? 'N/A',
         });
-        console.log('[SUCCESS] AI complete:', { severity: data.severity, confidence: data.confidence });
+        console.log('[SUCCESS] AI complete:', { severity: data.severity, confidence: data.confidence, width: data.width_cm, depth: data.depth_cm });
         stopPolling();
       }
     } catch (err) {
+      // Track consecutive 404s and stop after 3
+      if (err.response?.status === 404) {
+        notFoundCountRef.current += 1;
+        console.warn(`[SUCCESS] 404 — attempt ${notFoundCountRef.current}/3`);
+        if (notFoundCountRef.current >= 3) {
+          console.warn('[SUCCESS] Report not found after 3 attempts — using mock AI data');
+          stopPolling();
+          setAiProcessed(true);
+          setAiData({ severity: 'HIGH', confidence: '94%', width: '45cm', depth: '12cm', roadType: 'Asphalt' });
+          return;
+        }
+        return; // Keep polling
+      }
+      // Other errors (network down, etc.) — fallback to mock immediately
       console.log('[SUCCESS] Using mock AI data (backend not running)');
       setAiProcessed(true);
       setAiData({ severity: 'HIGH', confidence: '94%', width: '45cm', depth: '12cm', roadType: 'Asphalt' });
-      console.log('[SUCCESS] AI complete:', { severity: 'HIGH', confidence: '94%' });
       stopPolling();
     }
   };

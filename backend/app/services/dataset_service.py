@@ -4,7 +4,7 @@ Dataset service — business logic for dataset management.
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 from loguru import logger
@@ -33,7 +33,13 @@ class DatasetService:
         description: Optional[str] = None,
     ) -> Dataset:
         """Validate a path and register the dataset in the DB."""
-        path = Path(file_path)
+        path = Path(file_path).resolve()
+
+        # Issue #3: Prevent path traversal — restrict to configured dataset dir
+        allowed_root = settings.dataset_path.resolve()
+        if not str(path).startswith(str(allowed_root)):
+            raise ValueError(f"Path must be within the configured data directory: {allowed_root}")
+
         if not path.exists():
             raise FileNotFoundError(f"Path does not exist: {file_path}")
 
@@ -54,7 +60,7 @@ class DatasetService:
         return dataset
 
     # ── Scanning ────────────────────────────────────────────────
-    def scan_data_directory(self) -> List[Dict]:
+    def scan_data_directory(self) -> list[dict]:
         """Scan the configured data directory and return available datasets."""
         data_dir = settings.dataset_path
         if not data_dir.exists():
@@ -78,7 +84,7 @@ class DatasetService:
         return results
 
     # ── Validation ──────────────────────────────────────────────
-    def validate_dataset(self, file_path: str) -> Dict:
+    def validate_dataset(self, file_path: str) -> dict:
         """Return validation info about a dataset path."""
         path = Path(file_path)
         if not path.exists():

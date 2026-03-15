@@ -4,10 +4,10 @@ File-system utility helpers.
 
 import os
 from pathlib import Path
-from typing import Dict, Optional, Set
+from typing import Optional
 
 
-IMAGE_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
+IMAGE_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"}
 
 
 def list_image_files(directory: str | Path) -> list[Path]:
@@ -20,7 +20,7 @@ def list_image_files(directory: str | Path) -> list[Path]:
     )
 
 
-def count_files(directory: str | Path, extensions: Optional[Set[str]] = None) -> int:
+def count_files(directory: str | Path, extensions: Optional[set[str]] = None) -> int:
     """Count files in a directory, optionally filtered by extension."""
     directory = Path(directory)
     count = 0
@@ -31,7 +31,7 @@ def count_files(directory: str | Path, extensions: Optional[Set[str]] = None) ->
     return count
 
 
-def get_directory_info(directory: str | Path) -> Dict:
+def get_directory_info(directory: str | Path) -> dict:
     """Return summary info about a directory."""
     directory = Path(directory)
     if not directory.exists():

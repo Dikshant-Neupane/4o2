@@ -49,8 +49,8 @@ const LoginPage = () => {
       setLocalError('Please enter your name.');
       return;
     }
-    if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
+    if (password.length < 8) {
+      setLocalError('Password must be at least 8 characters.');
       return;
     }
 
@@ -212,7 +212,11 @@ const LoginPage = () => {
                     exit={{ opacity: 0, y: -4 }}
                     className="p-3 bg-red-50 border border-red-100 rounded-xl text-center"
                   >
-                    <p className="text-xs text-red-600 font-medium">{displayError}</p>
+                    <p className="text-xs text-red-600 font-medium">
+                      {typeof displayError === 'string'
+                        ? displayError
+                        : displayError?.message || displayError?.msg || JSON.stringify(displayError)}
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>

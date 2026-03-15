@@ -3,7 +3,7 @@ AI model training & inference API endpoints.
 """
 
 import json
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -13,7 +13,7 @@ from app.api.deps import get_db
 from app.models.training_run import TrainingRun
 from app.services.model_service import ModelService
 
-router = APIRouter(prefix="/api/models", tags=["Models"])
+router = APIRouter(prefix="/api/v1/models", tags=["Models"])
 
 
 # ── Pydantic schemas ────────────────────────────────────────────
@@ -57,7 +57,7 @@ class InferenceResponse(BaseModel):
 
 
 # ── Endpoints ───────────────────────────────────────────────────
-@router.get("/training-runs", response_model=List[TrainingRunResponse])
+@router.get("/training-runs", response_model=list[TrainingRunResponse])
 def list_training_runs(
     skip: int = 0,
     limit: int = 50,

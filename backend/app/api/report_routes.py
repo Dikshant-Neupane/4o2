@@ -9,15 +9,16 @@ import json
 import os
 from datetime import datetime
 from io import BytesIO
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from loguru import logger
 from PIL import Image
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db
-from app.api.auth import get_current_user, get_optional_user
+from app.api.deps import get_current_user, get_optional_user
 from app.models.comment import Comment
 from app.models.department import Department
 from app.models.report import Report
@@ -27,6 +28,18 @@ from app.services.inference import InferenceService
 from app.utils.geo_utils import haversine_distance
 
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
+
+# ── Constants ───────────────────────────────────────────────────
+CLUSTER_RADIUS_M = 500
+CLUSTER_THRESHOLD = 5
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+VERIFY_LIKE_THRESHOLD = 5
+
+# Approximate degree deltas for bounding-box pre-filter (~500m at ~27°N Nepal)
+LAT_DELTA = 0.0045
+LNG_DELTA = 0.0055
+
+SEVERITY_WEIGHT = {"LOW": 1, "MEDIUM": 2, "HIGH": 3}
 
 # ── Singleton inference service ─────────────────────────────────
 _inference_service: Optional[InferenceService] = None
@@ -59,6 +72,11 @@ class ReportResponse(BaseModel):
     ai_detection_confidence: Optional[float] = None
     ai_severity: Optional[str] = None
     ai_bounding_box_json: Optional[str] = None
+    width_cm: Optional[float] = None
+    depth_cm: Optional[float] = None
+    area_sqm: Optional[float] = None
+    road_type: Optional[str] = None
+    weather: Optional[str] = None
     priority_score: float = 0.0
     verified: bool = False
     like_count: int = 0
@@ -72,7 +90,7 @@ class ReportResponse(BaseModel):
 
 
 class ReportDetailResponse(ReportResponse):
-    comments: List["CommentResponse"] = []
+    comments: list["CommentResponse"] = []
 
 
 class VoteRequest(BaseModel):
@@ -92,7 +110,7 @@ class CommentRequest(BaseModel):
 class CommentResponse(BaseModel):
     id: int
     report_id: int
-    user_id: int
+    user_id: str
     text: str
     created_at: Optional[datetime] = None
     user: Optional["CommentUserResponse"] = None
@@ -117,6 +135,9 @@ class ReportStatusResponse(BaseModel):
     confidence: Optional[str] = None
     width_cm: Optional[str] = None
     depth_cm: Optional[str] = None
+    area_sqm: Optional[str] = None
+    road_type: Optional[str] = None
+    weather: Optional[str] = None
 
 
 # ── Helpers ─────────────────────────────────────────────────────
@@ -128,40 +149,41 @@ def _severity_from_confidence(confidence: float) -> str:
     return "LOW"
 
 
-_SEVERITY_WEIGHT = {"LOW": 1, "MEDIUM": 2, "HIGH": 3}
-
-
 def _cluster_check(report: Report, db: Session) -> str:
-    """Phase 8: count nearby active reports and decide reconstruction vs individual."""
-    all_reports = db.query(Report).filter(
+    """Phase 8: count nearby active reports using bounding-box pre-filter."""
+    # Issue #7: Pre-filter by bounding box before computing haversine
+    nearby_reports = db.query(Report).filter(
         Report.id != report.id,
         Report.status != "rejected",
+        Report.latitude.between(report.latitude - LAT_DELTA, report.latitude + LAT_DELTA),
+        Report.longitude.between(report.longitude - LNG_DELTA, report.longitude + LNG_DELTA),
     ).all()
 
-    cluster_count = 0
-    for r in all_reports:
-        dist = haversine_distance(report.latitude, report.longitude, r.latitude, r.longitude)
-        if dist <= 500:
-            cluster_count += 1
+    cluster_count = sum(
+        1 for r in nearby_reports
+        if haversine_distance(report.latitude, report.longitude, r.latitude, r.longitude) <= CLUSTER_RADIUS_M
+    )
 
-    print(f"[PHASE 8] 📍 Cluster check for report {report.id} at ({report.latitude}, {report.longitude})")
-    print(f"[PHASE 8] Nearby active reports: {cluster_count}")
+    logger.info("Cluster check for report {} — {} nearby reports", report.id, cluster_count)
 
-    if cluster_count >= 5:
-        print(f"[PHASE 8] 🚨 RECONSTRUCTION ALERT — {cluster_count} reports within 500m")
+    if cluster_count >= CLUSTER_THRESHOLD:
+        logger.info("RECONSTRUCTION ALERT — {} reports within {}m", cluster_count, CLUSTER_RADIUS_M)
         return "reconstruction"
     else:
-        print("[PHASE 8] 🔧 INDIVIDUAL REPAIR REQUEST")
         return "individual"
 
 
-def _enrich_report_response(report: Report, db: Session) -> dict:
-    """Build a response dict with department name included."""
-    data = {
+def _report_to_dict(report: Report) -> dict:
+    """Build a response dict from a report with eagerly-loaded department."""
+    dept_name = None
+    if report.department:
+        dept_name = report.department.name
+
+    return {
         "id": report.id,
         "user_id": report.user_id,
         "department_id": report.department_id,
-        "department_name": None,
+        "department_name": dept_name,
         "image_path": report.image_path,
         "latitude": report.latitude,
         "longitude": report.longitude,
@@ -171,6 +193,11 @@ def _enrich_report_response(report: Report, db: Session) -> dict:
         "ai_detection_confidence": report.ai_detection_confidence,
         "ai_severity": report.ai_severity,
         "ai_bounding_box_json": report.ai_bounding_box_json,
+        "width_cm": report.width_cm,
+        "depth_cm": report.depth_cm,
+        "area_sqm": report.area_sqm,
+        "road_type": report.road_type,
+        "weather": report.weather,
         "priority_score": report.priority_score,
         "verified": report.verified,
         "like_count": report.like_count,
@@ -179,11 +206,6 @@ def _enrich_report_response(report: Report, db: Session) -> dict:
         "created_at": report.created_at,
         "updated_at": report.updated_at,
     }
-    if report.department_id:
-        dept = db.query(Department).filter(Department.id == report.department_id).first()
-        if dept:
-            data["department_name"] = dept.name
-    return data
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -199,7 +221,7 @@ async def submit_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    print(f"[PHASE 6] 📥 New report submitted by user {current_user.id}")
+    logger.info("New report submitted by user {}", current_user.id)
 
     # Validate MIME type
     if image.content_type not in ("image/jpeg", "image/png", "image/webp"):
@@ -210,16 +232,17 @@ async def submit_report(
     if not dept:
         raise HTTPException(status_code=400, detail=f"Unknown category_id: {category_id}")
 
-    # Read image bytes
+    # Read image bytes with size limit (Issue #13)
     image_bytes = await image.read()
+    if len(image_bytes) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail=f"Image must be under {MAX_IMAGE_SIZE // (1024*1024)} MB")
 
-    # ── CRITICAL: Run AI inference ────────────────────────────
-    print("[PHASE 6] Running AI inference...")
+    # ── Run AI inference ──────────────────────────────────────
     try:
         service = _get_inference()
         ai_result = service.predict_from_bytes(image_bytes)
     except Exception as e:
-        print(f"[PHASE 6] ⚠️ AI inference failed: {e}")
+        logger.warning("AI inference failed: {}", e)
         ai_result = {
             "label": 0,
             "class_name": "unknown",
@@ -232,14 +255,17 @@ async def submit_report(
     confidence = ai_result.get("confidence", 0.0)
     predictions = ai_result.get("predictions", [])
     severity = _severity_from_confidence(confidence) if detected else "LOW"
-    priority_score = confidence * _SEVERITY_WEIGHT.get(severity, 1)
+    priority_score = confidence * SEVERITY_WEIGHT.get(severity, 1)
 
-    print("[PHASE 6] === AI RESULTS ===")
-    print(f"[PHASE 6] Pothole detected: {detected} (confidence: {confidence:.2%})")
-    print(f"[PHASE 6] Severity: {severity} | Priority score: {priority_score:.2f}")
-    print(f"[PHASE 6] Bounding boxes found: {len(predictions)}")
+    width_cm = predictions[0].get("width_cm") if predictions else None
+    depth_cm = predictions[0].get("depth_cm") if predictions else None
+    area_sqm = predictions[0].get("area_sqm") if predictions else None
+    road_type = predictions[0].get("road_type") if predictions else None
+    weather = predictions[0].get("weather") if predictions else None
 
-    # Create report record (get ID first so we can name the image)
+    logger.info("AI result: detected={}, confidence={:.2%}, severity={}, width={}cm, depth={}cm", detected, confidence, severity, width_cm, depth_cm)
+
+    # Create report record
     report = Report(
         user_id=current_user.id,
         department_id=dept.id,
@@ -251,20 +277,24 @@ async def submit_report(
         ai_detection_confidence=confidence,
         ai_severity=severity,
         ai_bounding_box_json=json.dumps(predictions) if predictions else None,
+        width_cm=width_cm,
+        depth_cm=depth_cm,
+        area_sqm=area_sqm,
+        road_type=road_type,
+        weather=weather,
         priority_score=priority_score,
     )
     db.add(report)
     db.flush()  # get report.id
 
-    # Save image as WebP (compress to max ~500 KB)
+    # Save image as WebP
     try:
         img = Image.open(BytesIO(image_bytes))
         save_path = os.path.join(MEDIA_DIR, f"{report.id}.webp")
         img.save(save_path, "WEBP", quality=75)
         report.image_path = f"/media/uploads/{report.id}.webp"
-        print(f"[PHASE 6] Image saved: {save_path}")
     except Exception as e:
-        print(f"[PHASE 6] ⚠️ Image save failed: {e}")
+        logger.warning("Image save failed: {}", e)
 
     # Phase 8: cluster check
     report.alert_type = _cluster_check(report, db)
@@ -272,22 +302,25 @@ async def submit_report(
     db.commit()
     db.refresh(report)
 
-    print(f"[PHASE 6] ✅ Report {report.id} saved to DB. Routed to: {dept.name}")
+    logger.info("Report {} saved, routed to: {}", report.id, dept.name)
 
-    # Broadcast via WebSocket (import here to avoid circular)
+    # Broadcast via WebSocket
     try:
         from app.api.ws_routes import broadcast_nearby_alert
         broadcast_nearby_alert(report, db)
     except Exception as e:
-        print(f"[PHASE 6] WebSocket broadcast skipped: {e}")
+        logger.warning("WebSocket broadcast skipped: {}", e)
 
-    return _enrich_report_response(report, db)
+    # Manually build response since we already have dept
+    resp = _report_to_dict(report)
+    resp["department_name"] = dept.name
+    return resp
 
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 6: Get nearby reports
+# Phase 6: Get nearby reports (Issue #8: bounding-box pre-filter)
 # ═══════════════════════════════════════════════════════════════
-@router.get("/nearby", response_model=List[ReportResponse])
+@router.get("/nearby", response_model=list[ReportResponse])
 def get_nearby_reports(
     lat: float,
     lng: float,
@@ -295,11 +328,23 @@ def get_nearby_reports(
     limit: int = 20,
     db: Session = Depends(get_db),
 ):
-    print(f"[PHASE 6] GET /nearby at ({lat}, {lng}) radius={radius}m")
-    all_reports = db.query(Report).filter(Report.status != "rejected").all()
+    # Pre-filter by approximate bounding box
+    lat_delta = radius / 111_000  # rough degrees
+    lng_delta = radius / 85_000   # rough degrees at ~27°N
+
+    candidates = (
+        db.query(Report)
+        .options(joinedload(Report.department))
+        .filter(
+            Report.status != "rejected",
+            Report.latitude.between(lat - lat_delta, lat + lat_delta),
+            Report.longitude.between(lng - lng_delta, lng + lng_delta),
+        )
+        .all()
+    )
 
     nearby = []
-    for r in all_reports:
+    for r in candidates:
         dist = haversine_distance(lat, lng, r.latitude, r.longitude)
         if dist <= radius:
             nearby.append((dist, r))
@@ -307,8 +352,7 @@ def get_nearby_reports(
     nearby.sort(key=lambda x: x[0])
     nearby = nearby[:limit]
 
-    print(f"[PHASE 6] ✅ Found {len(nearby)} reports within {radius}m")
-    return [_enrich_report_response(r, db) for _, r in nearby]
+    return [_report_to_dict(r) for _, r in nearby]
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -316,10 +360,15 @@ def get_nearby_reports(
 # ═══════════════════════════════════════════════════════════════
 @router.get("/{report_id}", response_model=ReportResponse)
 def get_report(report_id: int, db: Session = Depends(get_db)):
-    report = db.query(Report).filter(Report.id == report_id).first()
+    report = (
+        db.query(Report)
+        .options(joinedload(Report.department))
+        .filter(Report.id == report_id)
+        .first()
+    )
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return _enrich_report_response(report, db)
+    return _report_to_dict(report)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -336,11 +385,16 @@ def get_report_status(report_id: int, db: Session = Depends(get_db)):
         ai_processed=report.ai_detected is not None,
         severity=report.ai_severity,
         confidence=f"{(report.ai_detection_confidence or 0) * 100:.0f}%",
+        width_cm=f"{report.width_cm} cm" if report.width_cm is not None else "N/A",
+        depth_cm=f"{report.depth_cm} cm" if report.depth_cm is not None else "N/A",
+        area_sqm=f"{report.area_sqm} sqm" if report.area_sqm is not None else "N/A",
+        road_type=report.road_type if report.road_type is not None else "N/A",
+        weather=report.weather if report.weather is not None else "N/A",
     )
 
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 7: Vote on a report
+# Phase 7: Vote on a report (Issue #11: SQL-level increment)
 # ═══════════════════════════════════════════════════════════════
 @router.post("/{report_id}/vote", response_model=VoteResponse)
 def cast_vote(
@@ -360,30 +414,31 @@ def cast_vote(
     if existing:
         raise HTTPException(status_code=409, detail="ALREADY_VOTED")
 
-    print(f"[PHASE 7] Vote: {body.action} on report {report_id} by user {current_user.id}")
-
     vote = Vote(report_id=report_id, user_id=current_user.id, action=body.action)
     db.add(vote)
 
+    # Issue #11: Use SQL-level increment to avoid race condition
     if body.action == "like":
-        report.like_count = (report.like_count or 0) + 1
+        report.like_count = Report.like_count + 1
     else:
-        report.dislike_count = (report.dislike_count or 0) + 1
+        report.dislike_count = Report.dislike_count + 1
+
+    db.flush()
+    db.refresh(report)
 
     # Auto-verify if enough likes
-    if (report.like_count or 0) >= 5 and (report.dislike_count or 0) < (report.like_count or 0) / 2:
+    if (report.like_count or 0) >= VERIFY_LIKE_THRESHOLD and (report.dislike_count or 0) < (report.like_count or 0) / 2:
         if not report.verified:
             report.verified = True
-            print(f"[PHASE 7] 🏅 Report {report_id} VERIFIED!")
+            logger.info("Report {} VERIFIED", report_id)
             try:
                 from app.api.ws_routes import broadcast_verified
                 broadcast_verified(report)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("broadcast_verified failed: {}", e)
 
     db.commit()
     db.refresh(report)
-    print(f"[PHASE 7] ✅ Vote recorded. Likes: {report.like_count}, Dislikes: {report.dislike_count}")
 
     return VoteResponse(
         like_count=report.like_count or 0,
@@ -393,7 +448,7 @@ def cast_vote(
 
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 7: Add a comment
+# Phase 7: Add a comment (Issue #23: don't re-query current_user)
 # ═══════════════════════════════════════════════════════════════
 @router.post("/{report_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 def add_comment(
@@ -416,39 +471,36 @@ def add_comment(
     db.commit()
     db.refresh(comment)
 
-    user = db.query(User).filter(User.id == current_user.id).first()
-    print(f"[PHASE 7] 💬 Comment added on report {report_id} by {user.name}")
-
     return CommentResponse(
         id=comment.id,
         report_id=comment.report_id,
         user_id=comment.user_id,
         text=comment.text,
         created_at=comment.created_at,
-        user=CommentUserResponse(id=user.id, name=user.name) if user else None,
+        user=CommentUserResponse(id=current_user.id, name=current_user.name),
     )
 
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 7: Get comments for a report
+# Phase 7: Get comments (Issue #9: fix N+1 with joinedload)
 # ═══════════════════════════════════════════════════════════════
-@router.get("/{report_id}/comments", response_model=List[CommentResponse])
+@router.get("/{report_id}/comments", response_model=list[CommentResponse])
 def get_comments(report_id: int, db: Session = Depends(get_db)):
     comments = (
         db.query(Comment)
+        .options(joinedload(Comment.user))
         .filter(Comment.report_id == report_id)
         .order_by(Comment.created_at.desc())
         .all()
     )
-    result = []
-    for c in comments:
-        user = db.query(User).filter(User.id == c.user_id).first()
-        result.append(CommentResponse(
+    return [
+        CommentResponse(
             id=c.id,
             report_id=c.report_id,
             user_id=c.user_id,
             text=c.text,
             created_at=c.created_at,
-            user=CommentUserResponse(id=user.id, name=user.name) if user else None,
-        ))
-    return result
+            user=CommentUserResponse(id=c.user.id, name=c.user.name) if c.user else None,
+        )
+        for c in comments
+    ]

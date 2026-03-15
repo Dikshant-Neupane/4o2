@@ -8,7 +8,7 @@ pothole severity (minor / moderate / severe) based on bounding-box area.
 
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -20,6 +20,7 @@ from ai.models.config import (
     SEVERITY_THRESHOLDS,
 )
 from ai.utils.visualization import draw_detections
+import math
 
 
 class YOLOInference:
@@ -59,7 +60,7 @@ class YOLOInference:
         conf_threshold: float = INFERENCE_CONFIG["conf_threshold"],
         iou_threshold: float = INFERENCE_CONFIG["iou_threshold"],
         save_dir: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         Run prediction on a single image.
 
@@ -110,6 +111,26 @@ class YOLOInference:
             # ── Severity classification from bounding-box area ratio ──
             box_area = (x2 - x1) * (y2 - y1)
             severity = self._classify_severity(box_area, image_area)
+            
+            # ── Approach 2: Pinhole camera physical scale estimation ──
+            # Assumptions: Camera held 1.5m (150cm) from ground, 65 degree horizontal FOV
+            Z_CM = 150.0
+            FOV_DEG = 65.0
+            # Width of the entire image frame on the ground in cm
+            w_scene_cm = 2 * Z_CM * math.tan(math.radians(FOV_DEG / 2))
+            
+            box_w = x2 - x1
+            box_h = y2 - y1
+            
+            width_cm = round((box_w / img_w) * w_scene_cm, 1)
+            # Use w_scene_cm and img_w to keep physical aspect ratio the same (assuming square pixels)
+            depth_cm = round((box_h / img_w) * w_scene_cm, 1)
+            
+            # Surface area calculation
+            area_sqm = round((width_cm * depth_cm) / 10000.0, 2)
+            
+            # ── Efficient OpenCV Environment Heuristics ──
+            road_type, weather = self._estimate_environment(image_path)
 
             predictions.append({
                 "box":        [x1, y1, x2, y2],
@@ -117,6 +138,11 @@ class YOLOInference:
                 "class_id":   cls_id,
                 "class_name": cls_name,
                 "severity":   severity,
+                "width_cm":   width_cm,
+                "depth_cm":   depth_cm,
+                "area_sqm":   area_sqm,
+                "road_type":  road_type,
+                "weather":    weather,
             })
 
         logger.info(f"Found {len(predictions)} pothole(s)")
@@ -130,10 +156,10 @@ class YOLOInference:
     # ── Batch prediction ───────────────────────────────────────
     def predict_batch(
         self,
-        image_paths: List[str],
+        image_paths: list[str],
         conf_threshold: float = INFERENCE_CONFIG["conf_threshold"],
         save_dir: Optional[str] = None,
-    ) -> Dict[str, List[Dict]]:
+    ) -> dict[str, list[dict]]:
         """
         Run predictions on multiple images.
 
@@ -178,11 +204,44 @@ class YOLOInference:
         else:
             return "severe"
 
+    @staticmethod
+    def _estimate_environment(image_path: str) -> tuple[str, str]:
+        """
+        Uses efficient OpenCV color and brightness heuristics to estimate
+        the broader context of the image without needing a heavy deep network.
+        """
+        try:
+            img = cv2.imread(image_path)
+            if img is None:
+                return "Asphalt", "Dry"
+            
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            avg_h = np.mean(hsv[:, :, 0])
+            avg_s = np.mean(hsv[:, :, 1])
+            avg_v = np.mean(hsv[:, :, 2])
+            
+            # Road Type Heuristic
+            road_type = "Asphalt"
+            if avg_s > 40 and 10 < avg_h < 40:
+                road_type = "Dirt/Gravel"
+            elif avg_v > 150 and avg_s < 30:
+                road_type = "Concrete"
+                
+            # Weather Heuristic
+            weather = "Dry"
+            if avg_v < 90 or avg_s > 100:
+                weather = "Wet"
+                
+            return road_type, weather
+        except Exception as e:
+            logger.warning(f"Failed to estimate environment: {e}")
+            return "Asphalt", "Dry"
+
     # ── Save annotated image ───────────────────────────────────
     @staticmethod
     def _save_annotated(
         image_path: str,
-        predictions: List[Dict],
+        predictions: list[dict],
         class_names: dict,
         save_dir: str,
     ):

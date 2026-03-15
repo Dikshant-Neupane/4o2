@@ -4,6 +4,7 @@ Celery background tasks for AI model training — Phase 2.
 
 import json
 import traceback
+from datetime import datetime, timezone
 
 from loguru import logger
 
@@ -82,9 +83,9 @@ def train_model_task(
             "metrics": metrics,
             "hyperparams": {"epochs": epochs, "batch_size": batch_size, "model": trainer.model_type},
             "dataset_info": str(dataset.file_path),
-            "created_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
-        with open(Path(settings.model_path) / f"model_v{new_version}_meta.json", "w") as f:
+        with open(Path(settings.model_path) / f"model_v{new_version}_metadata.json", "w") as f:
             json.dump(metadata, f, indent=4)
 
         metrics["model_path"] = str(new_model_path)

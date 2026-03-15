@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { reports as reportsApi, votes as votesApi } from '../services/api';
 import { mockReports } from '../mocks/mockReports';
 
+/** Check if a JWT has the valid 3-segment format: header.payload.signature */
+const isValidJwt = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  return parts.length === 3 && parts.every(p => p.length > 0);
+};
+
 const useReportStore = create((set, get) => ({
   // ----- State -----
   reports: [],
@@ -164,6 +171,16 @@ const useReportStore = create((set, get) => ({
     try {
       console.log('[STORE] Submitting report to real API...');
 
+      // Bug 1 fix: Validate JWT before making the request
+      const token = localStorage.getItem('token');
+      if (!isValidJwt(token)) {
+        console.warn('[STORE] Invalid or missing JWT token — redirecting to login');
+        localStorage.removeItem('token');
+        set({ isSubmitting: false, error: 'Please log in to submit a report' });
+        window.location.href = '/login';
+        return { success: false, error: 'Not authenticated' };
+      }
+
       // Build FormData for multipart upload
       const formData = new FormData();
       if (reportData.image) {
@@ -173,8 +190,6 @@ const useReportStore = create((set, get) => ({
       formData.append('longitude', reportData.longitude || reportData.location?.lng || 85.3240);
       formData.append('category_id', reportData.category_id || reportData.category || 'road_damage');
       formData.append('description', reportData.description || '');
-
-      const token = localStorage.getItem('jana_sunuwaai_token');
       const res = await fetch(
         (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1') + '/reports/',
         {
@@ -206,31 +221,9 @@ const useReportStore = create((set, get) => ({
 
       return { success: true, report: newReport };
     } catch (err) {
-      console.warn('[STORE] Report submit failed:', err.message);
-      // Mock fallback
-      const newReport = {
-        id: Date.now(),
-        ...reportData,
-        status: 'submitted',
-        ai_severity: 'medium',
-        ai_detection_confidence: 0.65,
-        ai_category: reportData.category || 'infrastructure',
-        ai_summary: 'AI-generated summary of the reported issue.',
-        ai_priority_score: 65,
-        like_count: 0,
-        dislike_count: 0,
-        comment_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      set((state) => ({
-        reports: [newReport, ...state.reports],
-        lastSubmittedReport: newReport,
-        isSubmitting: false,
-      }));
-
-      return { success: true, report: newReport };
+      console.error('[STORE] ❌ Report submit failed:', err.message);
+      set({ isSubmitting: false, error: err.message });
+      return { success: false, error: err.message };
     }
   },
 

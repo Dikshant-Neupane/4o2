@@ -8,13 +8,13 @@ and convenience functions for quick demos.
 import cv2
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from ai.models.config import SEVERITY_LEVELS
 
 
 # ── Severity colour mapping ────────────────────────────────────
-def _severity_color(severity: str) -> Tuple[int, int, int]:
+def _severity_color(severity: str) -> tuple[int, int, int]:
     """Return BGR colour for a given severity level."""
     info = SEVERITY_LEVELS.get(severity, SEVERITY_LEVELS["minor"])
     return info["color"]
@@ -61,7 +61,7 @@ def draw_bounding_boxes(
 
 def draw_detections(
     image: np.ndarray,
-    predictions: List[Dict],
+    predictions: list[dict],
     show_severity: bool = True,
 ) -> np.ndarray:
     """
@@ -106,8 +106,8 @@ def draw_detections(
 
 
 def create_visualization_grid(
-    images: List[np.ndarray],
-    predictions_list: List[List[Dict]],
+    images: list[np.ndarray],
+    predictions_list: list[list[dict]],
     grid_cols: int = 3,
     cell_size: int = 320,
 ) -> np.ndarray:
@@ -153,7 +153,7 @@ def create_visualization_grid(
 
 def visualize_detections(
     image_path: str,
-    predictions: List[Dict],
+    predictions: list[dict],
     output_path: Optional[str] = None,
     show: bool = False,
 ) -> np.ndarray:

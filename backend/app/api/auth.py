@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 import bcrypt
 import uuid
@@ -12,8 +12,12 @@ from app.services.auth_service import (
     get_user_by_token
 )
 from app.models.user import User
+from loguru import logger
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
+
+# ── Constants ──────────────────────────────────────────────────
+MIN_PASSWORD_LENGTH = 8
 
 # ── Schemas ─────────────────────────────────────────────────────
 class LoginRequest(BaseModel):
@@ -56,7 +60,20 @@ def user_to_response(user: User) -> dict:
 # ── Endpoints ───────────────────────────────────────────────────
 @router.post("/register", response_model=AuthResponse)
 async def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    print(f"[AUTH] 📥 Register request: {body.email}")
+    logger.info("Register request for: {}", body.email)
+
+    # Issue #4: Password strength validation
+    if len(body.password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters",
+        )
+
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required")
+
+    if not body.email.strip():
+        raise HTTPException(status_code=400, detail="Email is required")
 
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
@@ -64,8 +81,8 @@ async def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
     user = User(
         id=str(uuid.uuid4()),
-        email=body.email,
-        name=body.name,
+        email=body.email.strip().lower(),
+        name=body.name.strip(),
         password_hash=hash_password(body.password),
         role="CITIZEN",
         is_active=True,
@@ -75,7 +92,7 @@ async def register(body: RegisterRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     access_token = create_access_token(user.id, user.email)
-    print(f"[AUTH] ✅ Registered: {user.email}")
+    logger.info("Registered user: {}", user.email)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -85,9 +102,9 @@ async def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=AuthResponse)
 async def login(body: LoginRequest, db: Session = Depends(get_db)):
-    print(f"[AUTH] 📥 Login request: {body.email}")
+    logger.info("Login request for: {}", body.email)
 
-    user = db.query(User).filter(User.email == body.email).first()
+    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
     if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -95,7 +112,7 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     access_token = create_access_token(user.id, user.email)
-    print(f"[AUTH] ✅ Login success: {user.email}")
+    logger.info("Login success: {}", user.email)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -117,5 +134,5 @@ async def get_me(
 
 @router.post("/logout")
 async def logout():
-    print(f"[AUTH] User logged out")
+    # Note: JWT is stateless — true logout requires token blacklisting (see Issue #6)
     return {"message": "Logged out successfully"}

@@ -77,15 +77,19 @@ const ReportDetail = () => {
   const fetchComments = async () => {
     try {
       const res = await commentsApi.getComments(id);
-      if (res.data) setCommentsList(res.data);
+      // Bug 3b: Normalize — ensure we always get an array
+      const rawComments = res.data;
+      const safe = Array.isArray(rawComments) ? rawComments : rawComments?.comments ?? [];
+      setCommentsList(safe);
     } catch (err) {
+      console.warn('[DETAIL] Comments fetch failed, using mock:', err.message);
       setCommentsList([
         { id: 'c1', user: { name: 'Aarav Sharma' }, text: 'I pass by this daily! Needs urgent attention.', created_at: '2026-03-14T08:00:00Z' },
         { id: 'c2', user: { name: 'Priya Adhikari' }, text: 'Reported this to the ward office too. Thanks for posting.', created_at: '2026-03-14T10:30:00Z' },
         { id: 'c3', user: { name: 'Bikash Tamang' }, text: 'My bike tire got damaged here yesterday.', created_at: '2026-03-14T14:15:00Z' },
       ]);
     }
-    console.log('[DETAIL] Comments:', commentsList.length || 3);
+    console.log('[DETAIL] Comments loaded');
   };
 
   const handleVote = async (action) => {
@@ -230,12 +234,12 @@ const ReportDetail = () => {
                   viewport={viewportOnce}
                 >
                   {[
-                    { label: 'Detection Confidence', value: `${report.ai_priority_score || 91}%` },
-                    { label: 'Width Estimate', value: report.width_cm ? `${report.width_cm} cm` : '45 cm' },
-                    { label: 'Depth Estimate', value: report.depth_cm ? `${report.depth_cm} cm` : '12 cm' },
-                    { label: 'Surface Area', value: report.area_sqm ? `${report.area_sqm} sqm` : '0.18 sqm' },
-                    { label: 'Road Type', value: report.road_type || 'Asphalt' },
-                    { label: 'Weather', value: report.weather || 'Dry' },
+                    { label: 'Detection Confidence', value: report.ai_detection_confidence ? `${Math.round(report.ai_detection_confidence * 100)}%` : 'N/A' },
+                    { label: 'Width Estimate', value: report.width_cm ? `${report.width_cm} cm` : 'N/A' },
+                    { label: 'Depth Estimate', value: report.depth_cm ? `${report.depth_cm} cm` : 'N/A' },
+                    { label: 'Surface Area', value: report.area_sqm ? `${report.area_sqm} sqm` : 'N/A' },
+                    { label: 'Road Type', value: report.road_type || 'N/A' },
+                    { label: 'Weather', value: report.weather || 'N/A' },
                   ].map((item, i) => (
                     <motion.div key={i} className="bg-white rounded-lg p-3 border border-blue-100" variants={cardVariants}>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{item.label}</p>
@@ -330,7 +334,7 @@ const ReportDetail = () => {
 
                 <div className="space-y-4">
                   <AnimatePresence>
-                    {commentsList.map(comment => (
+                    {(Array.isArray(commentsList) ? commentsList : []).map(comment => (
                       <motion.div
                         key={comment.id}
                         className="flex items-start gap-3"

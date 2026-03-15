@@ -6,7 +6,7 @@ console.log('[PHASE 1] Stores initialized');
 const useAuthStore = create((set, get) => ({
   // ----- State -----
   user: null,
-  token: localStorage.getItem('jana_sunuwaai_token') || null,
+  token: localStorage.getItem('token') || null,
   isAuthenticated: false,
   isHydrated: false,
   isLoading: false,
@@ -20,7 +20,7 @@ const useAuthStore = create((set, get) => ({
       const res = await auth.login(email, password);
       const { access_token, user } = res;
 
-      localStorage.setItem('jana_sunuwaai_token', access_token);
+      localStorage.setItem('token', access_token);
 
       set({
         user,
@@ -54,7 +54,7 @@ const useAuthStore = create((set, get) => ({
       const res = await auth.register(name, email, password);
       const { access_token, user } = res;
 
-      localStorage.setItem('jana_sunuwaai_token', access_token);
+      localStorage.setItem('token', access_token);
 
       set({
         user,
@@ -82,7 +82,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   hydrateUser: async () => {
-    const token = localStorage.getItem('jana_sunuwaai_token');
+    const token = localStorage.getItem('token');
     if (!token) {
       console.log('[AUTH] No token found during hydration');
       set({ isHydrated: true, isAuthenticated: false, token: null });
@@ -103,7 +103,7 @@ const useAuthStore = create((set, get) => ({
       console.log('[AUTH] ✅ Hydration success:', user.email);
     } catch (err) {
       console.warn('[AUTH] Token validation failed:', err.message);
-      localStorage.removeItem('jana_sunuwaai_token');
+      localStorage.removeItem('token');
       set({
         user: null,
         token: null,
@@ -116,7 +116,7 @@ const useAuthStore = create((set, get) => ({
 
   logout: () => {
     console.log('[AUTH] Logging out...');
-    localStorage.removeItem('jana_sunuwaai_token');
+    localStorage.removeItem('token');
     set({
       user: null,
       token: null,

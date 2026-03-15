@@ -5,7 +5,7 @@ Model service — orchestrates model training and inference (Phase 2).
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -77,7 +77,7 @@ class ModelService:
         self,
         run_id: int,
         status: str,
-        metrics: Optional[Dict[str, Any]] = None,
+        metrics: Optional[dict[str, Any]] = None,
         error_message: Optional[str] = None,
     ) -> TrainingRun:
         """Update a training run's status and optional metrics."""
@@ -105,7 +105,7 @@ class ModelService:
         self,
         model_type: str,
         image_path: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run inference on a single image using the latest trained model.
         """

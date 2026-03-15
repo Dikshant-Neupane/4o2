@@ -4,11 +4,11 @@ import { mockReports } from '../mocks/mockReports';
 import { mockUser } from '../mocks/mockUser';
 import { mockCategories } from '../mocks/mockCategories';
 
-const baseURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const baseURL = 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL,
-  timeout: 15000, // 15s timeout — AI inference can take a few seconds
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,7 +17,7 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('jana_sunuwaai_token');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -55,13 +55,16 @@ api.interceptors.response.use(
       } else if (url.includes('/users/me') && method === 'get') {
         return Promise.resolve({ data: mockUser, status: 200 });
       } else if (url.includes('/auth/login') && method === 'post') {
-        return Promise.resolve({ data: { access_token: 'mock-jwt-token', user: mockUser }, status: 200 });
+        return Promise.resolve({ data: { access_token: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2NrLXVzZXIifQ.mock-signature', user: mockUser }, status: 200 });
       } else if (url.includes('/auth/register') && method === 'post') {
-        return Promise.resolve({ data: { access_token: 'mock-jwt-token', user: mockUser }, status: 201 });
+        return Promise.resolve({ data: { access_token: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJtb2NrLXVzZXIifQ.mock-signature', user: mockUser }, status: 201 });
       } else if (url.includes('/auth/me') && method === 'get') {
         return Promise.resolve({ data: mockUser, status: 200 });
       } else if (url.includes('/departments') && method === 'get') {
         return Promise.resolve({ data: mockCategories, status: 200 });
+      } else if (url.includes('/comments') && method === 'get') {
+        // Bug 3a: Always return an array for comments to prevent .map() crash
+        return Promise.resolve({ data: [], status: 200 });
       }
       
       // For any other offline request, return a generic success
@@ -72,7 +75,7 @@ api.interceptors.response.use(
     
     if (error.response.status === 401) {
       console.log('[API] 401 — token expired or invalid, clearing auth...');
-      localStorage.removeItem('jana_sunuwaai_token');
+      localStorage.removeItem('token');
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';

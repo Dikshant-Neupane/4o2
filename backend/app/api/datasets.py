@@ -2,7 +2,7 @@
 Dataset management API endpoints.
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from app.api.deps import get_db
 from app.models.dataset import Dataset
 from app.services.dataset_service import DatasetService
 
-router = APIRouter(prefix="/api/datasets", tags=["Datasets"])
+router = APIRouter(prefix="/api/v1/datasets", tags=["Datasets"])
 
 
 # ── Pydantic schemas ────────────────────────────────────────────
@@ -46,11 +46,20 @@ class DatasetScanResponse(BaseModel):
 
 
 # ── Endpoints ───────────────────────────────────────────────────
-@router.get("/", response_model=List[DatasetResponse])
+@router.get("/", response_model=list[DatasetResponse])
 def list_datasets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """List all registered datasets."""
     datasets = db.query(Dataset).offset(skip).limit(limit).all()
     return datasets
+
+
+# NOTE: /scan/available MUST come before /{dataset_id} or FastAPI
+# treats "scan" as a dataset_id and returns a 422 validation error.
+@router.get("/scan/available", response_model=list[DatasetScanResponse])
+def scan_datasets(db: Session = Depends(get_db)):
+    """Scan the data directory for available datasets."""
+    service = DatasetService(db)
+    return service.scan_data_directory()
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)
@@ -83,10 +92,3 @@ def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dataset not found")
     db.delete(dataset)
     db.commit()
-
-
-@router.get("/scan/available", response_model=List[DatasetScanResponse])
-def scan_datasets(db: Session = Depends(get_db)):
-    """Scan the data directory for available datasets."""
-    service = DatasetService(db)
-    return service.scan_data_directory()

@@ -8,7 +8,7 @@ Endpoints:
     GET  /api/ai/model-status/{version} — details for a specific version
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
@@ -19,12 +19,12 @@ from app.services.inference import InferenceService
 from app.services.model_versioning import ModelVersioning
 from app.services.model_service import ModelService
 
-router = APIRouter(prefix="/api/ai", tags=["AI"])
+router = APIRouter(prefix="/api/v1/ai", tags=["AI"])
 
 
 # ── Pydantic Schemas ────────────────────────────────────────────
 class PredictionBox(BaseModel):
-    box: List[float]
+    box: list[float]
     confidence: float
     class_id: int
     class_name: str
@@ -36,7 +36,7 @@ class PredictResponse(BaseModel):
     label: int
     class_name: str
     confidence: float
-    predictions: List[PredictionBox] = []
+    predictions: list[PredictionBox] = []
     model_version: Optional[int] = None
     image_path: Optional[str] = None
 
@@ -154,7 +154,7 @@ def start_training(payload: TrainRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/model-status", response_model=List[ModelVersionResponse])
+@router.get("/model-status", response_model=list[ModelVersionResponse])
 def list_model_versions():
     """List all saved model versions with their metrics."""
     versioning = ModelVersioning()

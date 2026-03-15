@@ -19,9 +19,11 @@ if _is_sqlite:
 else:
     _engine_kwargs.update(pool_pre_ping=True, pool_size=5, max_overflow=10)
 
+from loguru import logger
+
 engine = create_engine(settings.database_url, **_engine_kwargs)
 
-print("[PHASE 1] ✅ Database switched to SQLite: civiceye.db" if _is_sqlite else f"[PHASE 1] Using: {settings.database_url}")
+logger.info("Database: {}", "SQLite (civiceye.db)" if _is_sqlite else settings.database_url)
 
 # ── Session factory ─────────────────────────────────────────────
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

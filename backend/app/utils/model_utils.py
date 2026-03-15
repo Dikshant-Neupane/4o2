@@ -3,7 +3,7 @@ Model loading / saving utilities.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 from loguru import logger
@@ -14,14 +14,14 @@ from app.core.config import settings
 def save_pytorch_model(
     model: torch.nn.Module,
     name: str,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ) -> str:
     """Save a PyTorch model to the configured models directory."""
     model_dir = settings.model_path
     model_dir.mkdir(parents=True, exist_ok=True)
 
     path = model_dir / f"{name}.pt"
-    payload: Dict[str, Any] = {"model_state_dict": model.state_dict()}
+    payload: dict[str, Any] = {"model_state_dict": model.state_dict()}
     if metadata:
         payload["metadata"] = metadata
 
@@ -49,7 +49,7 @@ def load_pytorch_model(
     return model
 
 
-def list_saved_models() -> list[Dict[str, Any]]:
+def list_saved_models() -> list[dict[str, Any]]:
     """List all saved model files with metadata."""
     model_dir = settings.model_path
     if not model_dir.exists():

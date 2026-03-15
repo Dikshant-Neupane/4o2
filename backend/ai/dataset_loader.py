@@ -9,7 +9,7 @@ import os
 import random
 import shutil
 from pathlib import Path
-from typing import Dict, List, Tuple
+
 
 import yaml
 from loguru import logger
@@ -43,7 +43,7 @@ class YOLODataLoader:
         self,
         source_dir: str = DEFAULT_PATHS["source_data"],
         output_dir: str = DEFAULT_PATHS["yolo_dataset"],
-        classes: Dict[int, str] = None,
+        classes: dict[int, str] = None,
     ):
         self.source_dir = Path(source_dir)
         self.output_dir = Path(output_dir)
@@ -59,7 +59,7 @@ class YOLODataLoader:
     # ── Public API ─────────────────────────────────────────────
     def prepare_dataset(
         self,
-        split_ratio: Tuple[float, float, float] = None,
+        split_ratio: tuple[float, float, float] = None,
     ) -> str:
         """
         Prepare the full YOLO dataset.

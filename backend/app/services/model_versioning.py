@@ -12,7 +12,7 @@ Saves models as:
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 from loguru import logger
@@ -50,11 +50,11 @@ class ModelVersioning:
     def save_model(
         self,
         model: torch.nn.Module,
-        metrics: Dict[str, Any],
-        hyperparams: Optional[Dict[str, Any]] = None,
+        metrics: dict[str, Any],
+        hyperparams: Optional[dict[str, Any]] = None,
         dataset_info: Optional[str] = None,
         version: Optional[int] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Save a model with auto-versioning and metadata.
 
@@ -108,7 +108,7 @@ class ModelVersioning:
         }
 
     # ── Load ────────────────────────────────────────────────────
-    def load_model_weights(self, version: int) -> Dict[str, Any]:
+    def load_model_weights(self, version: int) -> dict[str, Any]:
         """Load model checkpoint dict for a given version."""
         model_path = self.model_dir / f"model_v{version}.pt"
         if not model_path.exists():
@@ -118,7 +118,7 @@ class ModelVersioning:
         logger.info("Loaded model weights for v{}", version)
         return checkpoint
 
-    def load_metadata(self, version: int) -> Dict[str, Any]:
+    def load_metadata(self, version: int) -> dict[str, Any]:
         """Load metadata JSON for a given version."""
         meta_path = self.model_dir / f"model_v{version}_metadata.json"
         if not meta_path.exists():
@@ -128,7 +128,7 @@ class ModelVersioning:
             return json.load(f)
 
     # ── Listing ─────────────────────────────────────────────────
-    def list_versions(self) -> List[Dict[str, Any]]:
+    def list_versions(self) -> list[dict[str, Any]]:
         """List all saved model versions with their metadata."""
         versions = []
         for model_file in sorted(self._list_model_files()):
@@ -136,7 +136,7 @@ class ModelVersioning:
             if v is None:
                 continue
 
-            entry: Dict[str, Any] = {
+            entry: dict[str, Any] = {
                 "version": v,
                 "model_file": model_file.name,
                 "size_mb": round(model_file.stat().st_size / 1e6, 2),
@@ -158,7 +158,7 @@ class ModelVersioning:
         return versions
 
     # ── Helpers ─────────────────────────────────────────────────
-    def _list_model_files(self) -> List[Path]:
+    def _list_model_files(self) -> list[Path]:
         """List .pt model files that match the versioned naming pattern."""
         if not self.model_dir.exists():
             return []

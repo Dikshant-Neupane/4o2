@@ -9,7 +9,7 @@ Albumentations library for augmentation and OpenCV for basic transforms.
 import cv2
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from loguru import logger
 
@@ -44,7 +44,7 @@ class YOLOPreprocessor:
         self,
         imgsz: int = PREPROCESS_CONFIG["imgsz"],
         normalize: bool = PREPROCESS_CONFIG["normalize"],
-        augment_cfg: Optional[Dict] = None,
+        augment_cfg: Optional[dict] = None,
     ):
         self.imgsz = imgsz
         self.normalize = normalize
@@ -89,7 +89,7 @@ class YOLOPreprocessor:
 
         return img
 
-    def preprocess_batch(self, image_paths: List[str]) -> List[np.ndarray]:
+    def preprocess_batch(self, image_paths: list[str]) -> list[np.ndarray]:
         """Preprocess a list of images."""
         results = []
         for p in image_paths:
@@ -103,9 +103,9 @@ class YOLOPreprocessor:
     def augment(
         self,
         image: np.ndarray,
-        bboxes: Optional[List[List[float]]] = None,
-        class_labels: Optional[List[int]] = None,
-    ) -> Tuple[np.ndarray, Optional[List[List[float]]], Optional[List[int]]]:
+        bboxes: Optional[list[list[float]]] = None,
+        class_labels: Optional[list[int]] = None,
+    ) -> tuple[np.ndarray, Optional[list[list[float]]], Optional[list[int]]]:
         """
         Apply augmentations to an image (and its bounding boxes).
 

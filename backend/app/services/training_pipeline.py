@@ -10,7 +10,7 @@ Replaces the Phase 1 placeholder with a complete training loop including:
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import torch
 import torch.nn as nn
@@ -54,14 +54,14 @@ class TrainingPipeline:
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model: Optional[nn.Module] = None
-        self.dataloaders: Dict = {}
-        self.metrics: Dict[str, Any] = {}
+        self.dataloaders: dict = {}
+        self.metrics: dict[str, Any] = {}
 
         # Training history
-        self.train_losses: List[float] = []
-        self.val_losses: List[float] = []
-        self.train_accs: List[float] = []
-        self.val_accs: List[float] = []
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
+        self.train_accs: list[float] = []
+        self.val_accs: list[float] = []
 
     # ── Step 1: Load Data ───────────────────────────────────────
     def load_data(self) -> None:
@@ -204,7 +204,7 @@ class TrainingPipeline:
         return running_loss / total, correct / total
 
     # ── Step 4: Evaluate ────────────────────────────────────────
-    def evaluate(self) -> Dict[str, Any]:
+    def evaluate(self) -> dict[str, Any]:
         """Evaluate the model on the test set."""
         logger.info("Evaluating model on test set …")
         evaluator = ModelEvaluator(self.model, self.device)
@@ -251,7 +251,7 @@ class TrainingPipeline:
         return result["model_path"]
 
     # ── Full Pipeline ───────────────────────────────────────────
-    def run(self, output_dir: Optional[str] = None) -> Dict[str, Any]:
+    def run(self, output_dir: Optional[str] = None) -> dict[str, Any]:
         """Execute the full training pipeline: load → build → train → evaluate → save."""
         self.load_data()
         self.build_model()
