@@ -119,13 +119,7 @@ class ModelService:
             return {
                 "model_type": model_type,
                 "image_path": str(path),
-                "predictions": [
-                    {
-                        "class": prediction["class_name"],
-                        "confidence": prediction["confidence"],
-                        "label": prediction["label"],
-                    }
-                ],
+                "predictions": prediction["predictions"],
                 "message": f"Inference completed using model v{prediction['model_version']}",
             }
         except FileNotFoundError:
@@ -133,13 +127,7 @@ class ModelService:
             return {
                 "model_type": model_type,
                 "image_path": str(path),
-                "predictions": [
-                    {
-                        "class": "unknown",
-                        "confidence": 0.0,
-                        "note": "No trained model available. Run training first.",
-                    }
-                ],
+                "predictions": [],
                 "message": "No trained model found — please train a model first.",
             }
 

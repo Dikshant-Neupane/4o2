@@ -23,6 +23,8 @@ class DatasetCreate(BaseModel):
     file_type: str = "images"
 
 
+from datetime import datetime
+
 class DatasetResponse(BaseModel):
     id: int
     name: str
@@ -30,8 +32,8 @@ class DatasetResponse(BaseModel):
     file_path: str
     file_type: str
     num_samples: Optional[int]
-    created_at: Optional[str]
-    updated_at: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
 

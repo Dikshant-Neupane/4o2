@@ -34,25 +34,25 @@ class InferenceService:
 
     def load_model(self, version: Optional[int] = None) -> None:
         """
-        Load a specific YOLO model version, or the latest.
+        Load a specific YOLO model version, or the latest default.
         """
         if version is None:
-            version = self.versioning.get_latest_version()
-            if version is None:
-                raise FileNotFoundError("No trained models found. Run training first.")
+            model_path = Path("ai/weights/pothole_best.pt")
+            if not model_path.exists():
+                raise FileNotFoundError("Default YOLO model not found in ai/weights/")
+        else:
+            model_path = Path(self.model_dir) / f"model_v{version}.pt"
+            if not model_path.exists():
+                raise FileNotFoundError(f"Model file not found: {model_path}")
 
         # Skip if already loaded
         if self._model is not None and self._loaded_version == version:
             return
 
-        model_path = Path(self.model_dir) / f"model_v{version}.pt"
-        if not model_path.exists():
-            raise FileNotFoundError(f"Model file not found: {model_path}")
-
         from ai.inference import YOLOInference
         self._model = YOLOInference(str(model_path))
         self._loaded_version = version
-        logger.info("Inference model loaded — YOLOv8 v{} on {}", version, self.device)
+        logger.info("Inference model loaded — YOLOv8 v{} on {}", self._loaded_version, self.device)
 
     # ── Prediction ──────────────────────────────────────────────
     def predict(
@@ -79,15 +79,17 @@ class InferenceService:
         # Preprocessing and inference is handled by YOLO
         predictions = self._model.predict(str(path))
 
-        # We return the first prediction as the "primary" label for backwards compatibility, or format correctly.
+        # ── Format Response for FastAPI ──
         if predictions:
+            # If potholes detected, label the image as 1 (pothole), confidence is max of boxes
             best_pred = max(predictions, key=lambda x: x['confidence'])
-            label = best_pred['class_id']
+            label = 1
             conf = best_pred['confidence']
-            class_name = best_pred['class_name']
+            class_name = "pothole"
         else:
+            # Normal road
             label = 0
-            conf = 0.0
+            conf = 1.0
             class_name = "normal"
 
         logger.info(
@@ -99,7 +101,7 @@ class InferenceService:
             "label": label,
             "class_name": class_name,
             "confidence": conf,
-            "predictions": predictions, # Array of bounding boxes
+            "predictions": predictions,  # List of PredictionBox dictionaries
             "model_version": self._loaded_version,
             "image_path": str(path),
         }

@@ -24,6 +24,8 @@ class TrainingRequest(BaseModel):
     model_type: str = "yolo"  # yolo | resnet | sklearn
 
 
+from datetime import datetime
+
 class TrainingRunResponse(BaseModel):
     model_config = {"from_attributes": True, "protected_namespaces": ()}
 
@@ -33,9 +35,9 @@ class TrainingRunResponse(BaseModel):
     status: str
     metrics: Optional[str]
     error_message: Optional[str]
-    started_at: Optional[str]
-    completed_at: Optional[str]
-    created_at: Optional[str]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    created_at: Optional[datetime]
 
 
 class InferenceRequest(BaseModel):

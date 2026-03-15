@@ -23,13 +23,20 @@ router = APIRouter(prefix="/api/ai", tags=["AI"])
 
 
 # ── Pydantic Schemas ────────────────────────────────────────────
+class PredictionBox(BaseModel):
+    box: List[float]
+    confidence: float
+    class_id: int
+    class_name: str
+    severity: str
+
 class PredictResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
 
     label: int
     class_name: str
     confidence: float
-    probabilities: dict
+    predictions: List[PredictionBox] = []
     model_version: Optional[int] = None
     image_path: Optional[str] = None
 
@@ -38,7 +45,7 @@ class TrainRequest(BaseModel):
     model_config = {"protected_namespaces": ()}
 
     dataset_id: int
-    model_type: str = "resnet18"
+    model_type: str = "yolov8n.pt"
     epochs: int = 10
     learning_rate: float = 0.001
     batch_size: int = 16
