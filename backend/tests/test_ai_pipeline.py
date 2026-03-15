@@ -180,8 +180,11 @@ class TestAIEndpoints:
         response = client.get("/api/ai/model-status/999")
         assert response.status_code == 404
 
-    def test_predict_no_model(self, client):
+    @patch("app.api.ai_routes.InferenceService.predict_from_bytes")
+    def test_predict_no_model(self, mock_predict, client):
         """POST /api/ai/predict without trained model should return error."""
+        mock_predict.side_effect = FileNotFoundError("Model not found")
+        
         # Create a small test image
         img = Image.new("RGB", (50, 50), (100, 100, 100))
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
