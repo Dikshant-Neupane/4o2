@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # ── Redis / Celery ──────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
+    celery_task_always_eager: bool = False
 
     # ── Paths ───────────────────────────────────────────────────
     dataset_dir: str = "./Data"

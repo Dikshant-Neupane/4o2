@@ -7,22 +7,11 @@ from typing import Any, Dict, Optional
 
 import torch
 from loguru import logger
-from PIL import Image
-from torchvision import models, transforms
-
 from app.core.config import settings
-from app.services.data_preprocessing import IMAGE_SIZE, IMAGENET_MEAN, IMAGENET_STD
 from app.services.model_versioning import ModelVersioning
 
 
-# ── Inference Transform ─────────────────────────────────────────
-def get_inference_transform() -> transforms.Compose:
-    """Transform for inference — must match training validation transforms."""
-    return transforms.Compose([
-        transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-    ])
+
 
 
 class InferenceService:
@@ -37,29 +26,15 @@ class InferenceService:
     def __init__(self, model_dir: Optional[str] = None):
         self.model_dir = model_dir or str(settings.model_path)
         self.versioning = ModelVersioning(self.model_dir)
-        self.transform = get_inference_transform()
 
         # Cached model state
-        self._model: Optional[torch.nn.Module] = None
+        self._model = None
         self._loaded_version: Optional[int] = None
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # ── Model Loading ───────────────────────────────────────────
-    def _build_model(self) -> torch.nn.Module:
-        """Build a ResNet18 model with 2-class output (matching training)."""
-        model = models.resnet18(weights=None)
-        # Must match the architecture used in training_pipeline.py
-        model.fc = torch.nn.Sequential(
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(model.fc.in_features, 2),
-        )
-        return model
-
     def load_model(self, version: Optional[int] = None) -> None:
         """
-        Load a specific model version, or the latest.
-
-        Skips loading if the requested version is already cached.
+        Load a specific YOLO model version, or the latest.
         """
         if version is None:
             version = self.versioning.get_latest_version()
@@ -70,15 +45,14 @@ class InferenceService:
         if self._model is not None and self._loaded_version == version:
             return
 
-        checkpoint = self.versioning.load_model_weights(version)
-        model = self._build_model()
-        model.load_state_dict(checkpoint["model_state_dict"])
-        model.to(self.device)
-        model.eval()
+        model_path = Path(self.model_dir) / f"model_v{version}.pt"
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model file not found: {model_path}")
 
-        self._model = model
+        from ai.inference import YOLOInference
+        self._model = YOLOInference(str(model_path))
         self._loaded_version = version
-        logger.info("Inference model loaded — v{} on {}", version, self.device)
+        logger.info("Inference model loaded — YOLOv8 v{} on {}", version, self.device)
 
     # ── Prediction ──────────────────────────────────────────────
     def predict(
@@ -102,33 +76,30 @@ class InferenceService:
         if not path.exists():
             raise FileNotFoundError(f"Image not found: {image_path}")
 
-        # Load and preprocess
-        image = Image.open(str(path)).convert("RGB")
-        tensor = self.transform(image).unsqueeze(0).to(self.device)
+        # Preprocessing and inference is handled by YOLO
+        predictions = self._model.predict(str(path))
 
-        # Inference
-        with torch.no_grad():
-            outputs = self._model(tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted = torch.max(probabilities, 1)
-
-        label = predicted.item()
-        conf = round(confidence.item(), 4)
-        class_name = self.CLASS_NAMES[label]
+        # We return the first prediction as the "primary" label for backwards compatibility, or format correctly.
+        if predictions:
+            best_pred = max(predictions, key=lambda x: x['confidence'])
+            label = best_pred['class_id']
+            conf = best_pred['confidence']
+            class_name = best_pred['class_name']
+        else:
+            label = 0
+            conf = 0.0
+            class_name = "normal"
 
         logger.info(
-            "Prediction: {} (confidence={:.4f}) for {}",
-            class_name, conf, path.name,
+            "YOLO Prediction: {} objects found for {}",
+            len(predictions), path.name,
         )
 
         return {
             "label": label,
             "class_name": class_name,
             "confidence": conf,
-            "probabilities": {
-                name: round(p, 4)
-                for name, p in zip(self.CLASS_NAMES, probabilities[0].cpu().tolist())
-            },
+            "predictions": predictions, # Array of bounding boxes
             "model_version": self._loaded_version,
             "image_path": str(path),
         }
@@ -144,32 +115,20 @@ class InferenceService:
         Returns:
             Dict with label, confidence, class_name, and version.
         """
-        import io
+        import tempfile
+        import os
 
-        self.load_model(version)
-
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        tensor = self.transform(image).unsqueeze(0).to(self.device)
-
-        with torch.no_grad():
-            outputs = self._model(tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted = torch.max(probabilities, 1)
-
-        label = predicted.item()
-        conf = round(confidence.item(), 4)
-        class_name = self.CLASS_NAMES[label]
-
-        return {
-            "label": label,
-            "class_name": class_name,
-            "confidence": conf,
-            "probabilities": {
-                name: round(p, 4)
-                for name, p in zip(self.CLASS_NAMES, probabilities[0].cpu().tolist())
-            },
-            "model_version": self._loaded_version,
-        }
+        fd, temp_path = tempfile.mkstemp(suffix=".jpg")
+        with open(fd, "wb") as f:
+            f.write(image_bytes)
+            
+        try:
+            res = self.predict(temp_path, version)
+            # Hide the temp path from the user response
+            res.pop("image_path", None)
+            return res
+        finally:
+            os.remove(temp_path)
 
     # ── Status ──────────────────────────────────────────────────
     def get_status(self) -> Dict[str, Any]:

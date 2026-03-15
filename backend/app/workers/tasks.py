@@ -10,7 +10,6 @@ from loguru import logger
 from app.workers.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.services.model_service import ModelService
-from app.services.training_pipeline import TrainingPipeline
 from app.core.config import settings
 
 
@@ -50,15 +49,46 @@ def train_model_task(
             epochs,
         )
 
-        # Run full pipeline
-        pipeline = TrainingPipeline(
-            dataset_path=dataset.file_path,
-            model_type=run.model_type,
-            epochs=epochs,
-            learning_rate=learning_rate,
-            batch_size=batch_size,
+        # Run YOLO pipeline
+        from ai.dataset_loader import YOLODataLoader
+        from ai.train import YOLOTrainer
+        import shutil
+        from pathlib import Path
+
+        # Prepare YOLO dataset
+        loader = YOLODataLoader(source_dir=dataset.file_path, output_dir=f"datasets/yolo_run_{training_run_id}")
+        yaml_path = loader.prepare_dataset()
+
+        # Train model
+        trainer = YOLOTrainer(
+            data_yaml_path=str(yaml_path), 
+            model_type=run.model_type if run.model_type and run.model_type != 'resnet18' else "yolov8n.pt", 
+            project_dir=str(settings.model_path / "yolo_runs")
         )
-        metrics = pipeline.run(output_dir=str(settings.model_path))
+        best_model_path, metrics = trainer.train(epochs=epochs, batch_size=batch_size)
+
+        # Versioning Integration
+        from app.services.model_versioning import ModelVersioning
+        versioning = ModelVersioning(str(settings.model_path))
+        version = versioning.get_latest_version()
+        new_version = (version or 0) + 1
+        
+        new_model_name = f"model_v{new_version}.pt"
+        new_model_path = Path(settings.model_path) / new_model_name
+        shutil.copy(best_model_path, new_model_path)
+
+        metadata = {
+            "version": new_version,
+            "metrics": metrics,
+            "hyperparams": {"epochs": epochs, "batch_size": batch_size, "model": trainer.model_type},
+            "dataset_info": str(dataset.file_path),
+            "created_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+        }
+        with open(Path(settings.model_path) / f"model_v{new_version}_meta.json", "w") as f:
+            json.dump(metadata, f, indent=4)
+
+        metrics["model_path"] = str(new_model_path)
+        metrics["model_version"] = new_version
 
         # Sanitize metrics for JSON serialization
         serializable_metrics = {
