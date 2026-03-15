@@ -8,7 +8,7 @@ const baseURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_UR
 
 const api = axios.create({
   baseURL,
-  timeout: 5000, // 5s timeout so connection-refused fails fast
+  timeout: 15000, // 15s timeout — AI inference can take a few seconds
   headers: {
     'Content-Type': 'application/json',
   },
@@ -55,7 +55,11 @@ api.interceptors.response.use(
       } else if (url.includes('/users/me') && method === 'get') {
         return Promise.resolve({ data: mockUser, status: 200 });
       } else if (url.includes('/auth/login') && method === 'post') {
-        return Promise.resolve({ data: { token: 'mock-jwt-token', user: mockUser }, status: 200 });
+        return Promise.resolve({ data: { access_token: 'mock-jwt-token', user: mockUser }, status: 200 });
+      } else if (url.includes('/auth/register') && method === 'post') {
+        return Promise.resolve({ data: { access_token: 'mock-jwt-token', user: mockUser }, status: 201 });
+      } else if (url.includes('/auth/me') && method === 'get') {
+        return Promise.resolve({ data: mockUser, status: 200 });
       } else if (url.includes('/departments') && method === 'get') {
         return Promise.resolve({ data: mockCategories, status: 200 });
       }
@@ -67,7 +71,12 @@ api.interceptors.response.use(
     console.error('[API] Error:', error.response.status);
     
     if (error.response.status === 401) {
-      console.log('[API] 401 — token expired, refreshing...');
+      console.log('[API] 401 — token expired or invalid, clearing auth...');
+      localStorage.removeItem('jana_sunuwaai_token');
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     
     if (error.response.status === 429) {
@@ -83,10 +92,10 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  register: (data) => api.post('/auth/register', data),
-  login: (data) => api.post('/auth/login', data),
-  refresh: () => api.post('/auth/refresh'),
-  logout: () => api.post('/auth/logout'),
+  login: (email, password) => api.post('/auth/login', { email, password }).then(res => res.data),
+  register: (name, email, password) => api.post('/auth/register', { name, email, password }).then(res => res.data),
+  getMe: () => api.get('/auth/me').then(res => res.data),
+  logout: () => api.post('/auth/logout').then(res => res.data),
 };
 
 export const reports = {
@@ -97,7 +106,7 @@ export const reports = {
 };
 
 export const votes = {
-  castVote: (reportId, voteType) => api.post(`/reports/${reportId}/vote`, { type: voteType }),
+  castVote: (reportId, voteType) => api.post(`/reports/${reportId}/vote`, { action: voteType }),
 };
 
 export const comments = {

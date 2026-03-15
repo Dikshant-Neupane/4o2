@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     debug: bool = True
     secret_key: str = "change-me-in-production"
 
+    # ── Google OAuth ───────────────────────────────────────────
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
+    # ── JWT ─────────────────────────────────────────────────────
+    jwt_secret_key: str = "civiceye-jwt-secret-min-32-chars-long"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
+
     # ── CORS ────────────────────────────────────────────────────
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
@@ -32,7 +41,7 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     # ── Database ────────────────────────────────────────────────
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/ai_pothole_db"
+    database_url: str = "sqlite:///./civiceye.db"
 
     # ── Redis / Celery ──────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"

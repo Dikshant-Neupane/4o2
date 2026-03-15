@@ -8,13 +8,20 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 
 # ── Engine ──────────────────────────────────────────────────────
-engine = create_engine(
-    settings.database_url,
+_is_sqlite = settings.database_url.startswith("sqlite")
+
+_engine_kwargs = dict(
     echo=settings.debug,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
 )
+
+if _is_sqlite:
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    _engine_kwargs.update(pool_pre_ping=True, pool_size=5, max_overflow=10)
+
+engine = create_engine(settings.database_url, **_engine_kwargs)
+
+print("[PHASE 1] ✅ Database switched to SQLite: civiceye.db" if _is_sqlite else f"[PHASE 1] Using: {settings.database_url}")
 
 # ── Session factory ─────────────────────────────────────────────
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

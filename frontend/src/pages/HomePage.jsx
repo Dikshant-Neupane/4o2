@@ -76,6 +76,8 @@ const HomePage = () => {
       
       const formattedCategories = fetchedCategories.map((cat, index) => ({
         ...cat,
+        id: String(cat.id),
+        category_id: String(cat.category_id || cat.id),
         status: index < 3 ? 'ACTIVE' : 'COMING_SOON',
         IconComponent: LucideIcons[cat.icon] || LucideIcons.HelpCircle
       }));
@@ -246,7 +248,7 @@ const HomePage = () => {
                 id={category.id}
                 label={category.label}
                 icon={category.IconComponent}
-                department={category.id.replace('_', ' ')}
+                department={String(category.category_id || category.id).replace('_', ' ')}
                 status={category.status}
                 onSelect={handleCategorySelect}
                 onComingSoon={handleComingSoon}

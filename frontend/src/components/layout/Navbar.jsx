@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef } from "react"
-import { useLocation, Link } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Home, LayoutList, MapPin,
-  HelpCircle, Info, Menu, X
+  HelpCircle, Info, Menu, X, LogOut, User
 } from "lucide-react"
 
 import myLogo from "../../pictures/logofolder/logo.png"
+import useAuthStore from "../../store/authStore"
 
 const NAV_ITEMS = [
   { name: "Home",         url: "/",            icon: Home       },
@@ -17,7 +18,9 @@ const NAV_ITEMS = [
 ]
 
 export default function Navbar() {
+  const navigate = useNavigate()
   const location  = useLocation()
+  const { user, isAuthenticated, logout } = useAuthStore()
   const pathname = location.pathname
   const [scrolled,   setScrolled]   = useState(false)
   const [menuOpen,   setMenuOpen]   = useState(false)
@@ -237,30 +240,59 @@ export default function Navbar() {
               })}
             </div>
 
-            {/* Zone 3 — Buttons */}
+            {/* Zone 3 — Buttons/User Profile */}
             <div style={{
               display: "flex",
               alignItems: "center",
               gap: "12px",
               justifyContent: "flex-end",
             }}>
-              <Link
-                to="/login"
-                style={{
-                  border: "1px solid #1B4FD8",
-                  color: "#1B4FD8",
-                  backgroundColor: "rgba(255,255,255,0.85)",
-                  backdropFilter: "blur(8px)",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  transition: "background-color 0.2s",
-                }}
-              >
-                Login
-              </Link>
+              {isAuthenticated ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 8px", borderRadius: "9999px", backgroundColor: "rgba(0,0,0,0.03)" }}>
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.name} style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover", border: "1px solid #E5E7EB" }} />
+                    ) : (
+                      <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#1B4FD8", color: "#fff", display: "flex", alignItems: "center", justifyCenter: "center" }}>
+                        <User size={16} />
+                      </div>
+                    )}
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>{user?.name?.split(' ')[0]}</span>
+                  </div>
+                  <button
+                    onClick={() => { logout(); navigate('/login'); }}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "#6B7280", display: "flex", alignItems: "center", gap: "4px",
+                      fontSize: "13px", fontWeight: 500, padding: "8px",
+                      transition: "color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.target.style.color = "#1B4FD8"}
+                    onMouseLeave={(e) => e.target.style.color = "#6B7280"}
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  style={{
+                    border: "1px solid #1B4FD8",
+                    color: "#1B4FD8",
+                    backgroundColor: "rgba(255,255,255,0.85)",
+                    backdropFilter: "blur(8px)",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    transition: "background-color 0.2s",
+                  }}
+                >
+                  Login
+                </Link>
+              )}
               <Link
                 to="/report"
                 style={{
@@ -475,23 +507,45 @@ export default function Navbar() {
                 gap: "10px",
                 borderTop: "1px solid #E5E7EB",
               }}>
-                <Link
-                  to="/login"
-                  style={{
-                    display: "block",
-                    textAlign: "center",
-                    border: "1px solid #1B4FD8",
-                    color: "#1B4FD8",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    textDecoration: "none",
-                    backgroundColor: "#fff",
-                  }}
-                >
-                  Login
-                </Link>
+                {isAuthenticated ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+                    {user?.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.name} style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
+                    ) : (
+                      <div style={{ width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#1B4FD8", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <User size={20} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>{user?.name}</p>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#6B7280" }}>{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => { logout(); navigate('/login'); }}
+                      style={{ background: "none", border: "none", padding: "8px", color: "#6B7280" }}
+                    >
+                      <LogOut size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/login"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      border: "1px solid #1B4FD8",
+                      color: "#1B4FD8",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      textDecoration: "none",
+                      backgroundColor: "#fff",
+                    }}
+                  >
+                    Login
+                  </Link>
+                )}
                 <Link
                   to="/report"
                   style={{

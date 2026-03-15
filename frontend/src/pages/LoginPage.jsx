@@ -1,283 +1,248 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Loader2, ShieldCheck, Mail, Lock, UserPlus, LogIn, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from "../pictures/logofolder/logo.png";
 
 import useAuthStore from '../store/authStore';
 import {
-  buttonSpring, shineClasses, useReducedMotionSafe, duration, easing, spring
+  useReducedMotionSafe, spring
 } from '../lib/motion';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, login, register, isLoading, error, clearError } = useAuthStore();
+  const { isAuthenticated, isHydrated, login, register, isLoading, error, clearError } = useAuthStore();
   const prefersReduced = useReducedMotionSafe();
 
-  const [activeTab, setActiveTab] = useState('login');
-
-  const [loginPhone, setLoginPhone] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-
-  const [regName, setRegName] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirm, setRegConfirm] = useState('');
-  const [confirmError, setConfirmError] = useState('');
-  const [shakeError, setShakeError] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState('');
 
   const from = location.state?.from?.pathname || '/';
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/', { replace: true });
-  }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    clearError();
-    setConfirmError('');
-  }, [activeTab, clearError]);
-
-  // Trigger shake when error appears
-  useEffect(() => {
-    if (error) {
-      setShakeError(true);
-      const t = setTimeout(() => setShakeError(false), 500);
-      return () => clearTimeout(t);
+    if (isHydrated && isAuthenticated) {
+      navigate(from, { replace: true });
     }
-  }, [error]);
+  }, [isAuthenticated, isHydrated, navigate, from]);
 
-  const handleLogin = async (e) => {
+  // Clear errors when switching modes
+  useEffect(() => {
+    setLocalError('');
+    clearError();
+  }, [isRegisterMode]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('[AUTH] Login attempt:', loginPhone);
-    const result = await login(loginPhone, loginPassword);
-    if (result.success) { console.log('[AUTH] ✅ Login success'); toast.success('Welcome back!'); navigate(from, { replace: true }); }
-    else { console.error('[AUTH] ❌ Login failed:', result.error); }
+    setLocalError('');
+
+    if (!email.trim() || !password.trim()) {
+      setLocalError('Please fill in all fields.');
+      return;
+    }
+    if (isRegisterMode && !name.trim()) {
+      setLocalError('Please enter your name.');
+      return;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters.');
+      return;
+    }
+
+    let result;
+    if (isRegisterMode) {
+      result = await register(name, email, password);
+    } else {
+      result = await login(email, password);
+    }
+
+    if (result.success) {
+      toast.success(isRegisterMode ? `Welcome, ${result.user.name}!` : `Welcome back, ${result.user.name}!`);
+    } else {
+      setLocalError(result.error);
+    }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setConfirmError('');
-    if (regPassword !== regConfirm) { setConfirmError('Passwords do not match'); return; }
-
-    console.log('[AUTH] Register:', regName);
-    const result = await register({ name: regName, phone: regPhone, password: regPassword });
-    if (result.success) { console.log('[AUTH] ✅ Register success'); toast.success('Account created!'); navigate('/', { replace: true }); }
-    else { console.error('[AUTH] ❌ Register failed:', result.error); }
-  };
-
-  const inputFocusClasses = 'focus:ring-2 focus:ring-[#1B4FD8]/15 focus:border-[#1B4FD8] transition-all';
+  const displayError = localError || error;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#F8F9FC] flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-[#16A34A] rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-[#1B4FD8] rounded-full blur-[120px]" />
+      </div>
+
       <motion.div
-        className="w-full max-w-md"
+        className="w-full max-w-sm relative z-10"
         initial={prefersReduced ? false : { opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4, ...spring.default }}
       >
-
-            <img
-              src={logo}
-              alt="Jana Sunuwaai"
-              style={{
-                height: "180px",
-                width: "auto",
-                objectFit: "contain",
-                display: "block",
-                margin: "0 auto",
-                paddingBottom: "30px"
-              }}
-            />
+        <div className="text-center mb-8">
+          <img
+            src={logo}
+            alt="Jana Sunuwaai"
+            className="h-24 mx-auto mb-6 object-contain"
+          />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to CivicEye</h1>
+          <p className="text-gray-500 text-sm">Empowering citizens through transparency.</p>
+        </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
+          <div className="space-y-5">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1B4FD8]">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  {isRegisterMode ? 'Create Account' : 'Sign In'}
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  {isRegisterMode
+                    ? 'Join the community and start reporting issues.'
+                    : 'Sign in with your email and password.'}
+                </p>
+              </div>
+            </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 relative">
-            <button
-              onClick={() => setActiveTab('login')}
-              className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                activeTab === 'login' ? 'text-[#1B4FD8]' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setActiveTab('register')}
-              className={`flex-1 py-4 text-sm font-bold text-center transition-colors relative ${
-                activeTab === 'register' ? 'text-[#1B4FD8]' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Register
-            </button>
-            {/* Animated underline */}
-            <motion.div
-              className="absolute bottom-0 h-0.5 bg-[#1B4FD8]"
-              animate={{
-                left: activeTab === 'login' ? '0%' : '50%',
-                width: '50%',
-              }}
-              transition={{ duration: duration.normal, ease: easing.smooth }}
-            />
-          </div>
+            {/* Toggle Login/Register */}
+            <div className="flex rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setIsRegisterMode(false)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  !isRegisterMode
+                    ? 'bg-white text-[#1B4FD8] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRegisterMode(true)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  isRegisterMode
+                    ? 'bg-white text-[#1B4FD8] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Register
+              </button>
+            </div>
 
-          <div className="p-6 sm:p-8">
-            <AnimatePresence mode="wait">
-
-              {/* ═══ LOGIN TAB ═══ */}
-              {activeTab === 'login' && (
-                <motion.form
-                  key="login"
-                  onSubmit={handleLogin}
-                  className="space-y-5"
-                  initial={prefersReduced ? false : { opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: duration.fast }}
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
-                    <input
-                      type="tel" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)}
-                      placeholder="+977 98XXXXXXXX" required
-                      className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm ${inputFocusClasses}`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name (Register only) */}
+              <AnimatePresence>
+                {isRegisterMode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Full Name</label>
+                    <div className="relative">
+                      <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
-                        type="password" value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)} placeholder="Enter your password" required
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm ${inputFocusClasses}`}
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Your full name"
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1B4FD8]/20 focus:border-[#1B4FD8] outline-none transition-all"
                       />
-                    <div className="text-right mt-1.5">
-                      <button type="button" className="text-xs font-semibold text-[#1B4FD8] hover:text-blue-800">
-                        Forgot password?
-                      </button>
                     </div>
-                  </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                  {error && (
-                    <motion.p
-                      className="text-sm text-[#DC2626]"
-                      animate={shakeError && !prefersReduced ? { x: [0, -8, 8, -4, 4, 0] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
-                      {error}
-                    </motion.p>
-                  )}
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1B4FD8]/20 focus:border-[#1B4FD8] outline-none transition-all"
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
 
-                  <motion.button
-                    type="submit" disabled={isLoading}
-                    className={`w-full py-3.5 bg-[#1B4FD8] text-white font-bold rounded-xl hover:bg-blue-800 disabled:bg-blue-400 transition-colors flex items-center justify-center gap-2 shadow-sm ${shineClasses}`}
-                    variants={buttonSpring} initial="rest" whileHover="hover" whileTap="tap"
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#1B4FD8]/20 focus:border-[#1B4FD8] outline-none transition-all"
+                    autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Logging in...</> : 'Login to My Account'}
-                  </motion.button>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
-                  {/* Divider */}
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-                    <div className="relative flex justify-center text-xs"><span className="bg-white px-3 text-gray-400 font-medium">Or continue with</span></div>
-                  </div>
-
-                  {/* Social Buttons */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <motion.button type="button" className="flex items-center justify-center gap-2 w-full py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" whileTap={{ scale: 0.97 }}>
-                      <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                      Google
-                    </motion.button>
-                    <motion.button type="button" className="flex items-center justify-center gap-2 w-full py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors" whileTap={{ scale: 0.97 }}>
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                      Apple
-                    </motion.button>
-                  </div>
-
-                  <p className="text-center text-sm text-gray-500 mt-4">
-                    New to Jana Sunuwaai?{' '}
-                    <button type="button" onClick={() => setActiveTab('register')} className="font-semibold text-[#1B4FD8] hover:text-blue-800">
-                      Create an account
-                    </button>
-                  </p>
-                </motion.form>
-              )}
-
-              {/* ═══ REGISTER TAB ═══ */}
-              {activeTab === 'register' && (
-                <motion.form
-                  key="register"
-                  onSubmit={handleRegister}
-                  className="space-y-5"
-                  initial={prefersReduced ? false : { opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: duration.fast }}
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                    <input type="text" value={regName} onChange={(e) => setRegName(e.target.value)}
-                      placeholder="Ram Maharjan" required className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm ${inputFocusClasses}`} />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
-                    <input type="tel" value={regPhone} onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="+977 98XXXXXXXX" required className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm ${inputFocusClasses}`} />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                    <input type="password" value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)} placeholder="Create a password" required
-                      className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm ${inputFocusClasses}`} />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
-                    <input type="password" value={regConfirm}
-                      onChange={(e) => {
-                        setRegConfirm(e.target.value);
-                        if (e.target.value && e.target.value !== regPassword) setConfirmError('Passwords do not match');
-                        else setConfirmError('');
-                      }}
-                      placeholder="Confirm your password" required
-                      className={`w-full px-4 py-3 border rounded-xl text-sm ${inputFocusClasses} ${confirmError ? 'border-[#DC2626]' : 'border-gray-300'}`}
-                    />
-                    {confirmError && <p className="text-xs text-[#DC2626] mt-1.5">{confirmError}</p>}
-                  </div>
-
-                  {error && (
-                    <motion.p className="text-sm text-[#DC2626]"
-                      animate={shakeError && !prefersReduced ? { x: [0, -8, 8, -4, 4, 0] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
-                      {error}
-                    </motion.p>
-                  )}
-
-                  <motion.button type="submit" disabled={isLoading || !!confirmError}
-                    className={`w-full py-3.5 bg-[#1B4FD8] text-white font-bold rounded-xl hover:bg-blue-800 disabled:bg-blue-400 transition-colors flex items-center justify-center gap-2 shadow-sm ${shineClasses}`}
-                    variants={buttonSpring} initial="rest" whileHover="hover" whileTap="tap"
+              {/* Error Display */}
+              <AnimatePresence>
+                {displayError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="p-3 bg-red-50 border border-red-100 rounded-xl text-center"
                   >
-                    {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Creating account...</> : 'Create Account'}
-                  </motion.button>
+                    <p className="text-xs text-red-600 font-medium">{displayError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-                  <p className="text-center text-sm text-gray-500 mt-4">
-                    Already have an account?{' '}
-                    <button type="button" onClick={() => setActiveTab('login')} className="font-semibold text-[#1B4FD8] hover:text-blue-800">
-                      Login
-                    </button>
-                  </p>
-                </motion.form>
-              )}
-
-            </AnimatePresence>
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 bg-[#1B4FD8] text-white font-semibold text-sm rounded-xl hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                whileTap={{ scale: 0.98 }}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {isRegisterMode ? 'Creating account...' : 'Signing in...'}
+                  </>
+                ) : (
+                  <>
+                    {isRegisterMode ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                    {isRegisterMode ? 'Create Account' : 'Sign In'}
+                  </>
+                )}
+              </motion.button>
+            </form>
           </div>
         </div>
 
+        <p className="text-center text-[11px] text-gray-400 mt-8 px-6">
+          By signing in, you agree to our Terms of Service and Privacy Policy. CivicEye is a community platform.
+        </p>
       </motion.div>
     </div>
   );

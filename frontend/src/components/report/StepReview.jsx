@@ -5,7 +5,6 @@ import L from 'leaflet';
 import * as LucideIcons from 'lucide-react';
 
 import useReportStore from '../../store/reportStore';
-import { reports } from '../../services/api';
 import { mockCategories } from '../../mocks/mockCategories';
 
 // Fix Leaflet's default icon path issues (CDN to avoid Rollup resolve issues)
@@ -35,36 +34,41 @@ const StepReview = ({ onBack }) => {
     setIsSubmitting(true);
     setErrorMsg('');
     console.log('[STEP5] Submitting...');
-    
-    // Build FormData
-    const formData = new FormData();
-    formData.append('category', category);
-    formData.append('lat', location.lat);
-    formData.append('lng', location.lng);
-    if (description) formData.append('description', description);
-    if (image) formData.append('image', image);
 
-    // Logging FormData contents
-    const contents = {};
-    for (let [key, value] of formData.entries()) {
-      contents[key] = value instanceof File ? value.name : value;
-    }
-    console.log('[STEP5] FormData:', contents);
+    // Log what we're sending
+    console.log('[STEP5] FormData:', {
+      category_id: category,
+      latitude: location?.lat,
+      longitude: location?.lng,
+      description: description || '',
+      image: image?.name || 'no image',
+    });
 
     try {
-      const response = await reports.submit(formData);
-      // Assuming 202 or 201 for success
-      if (response.status === 202 || response.status === 201) {
-         const returnedId = response.data?.id || 'mock-id-new';
-         console.log('[STEP5] ✅ Success:', returnedId);
-         clearReport();
-         navigate(`/success/${returnedId}`);
+      // Use the store's submitReport which builds correct FormData
+      // and handles the real API call with AI inference
+      const { submitReport } = useReportStore.getState();
+      const result = await submitReport({
+        image,
+        latitude: location?.lat,
+        longitude: location?.lng,
+        category_id: category,
+        category,
+        description: description || '',
+        location,
+      });
+
+      if (result.success) {
+        const returnedId = result.report?.id || 'mock-id-new';
+        console.log('[STEP5] ✅ Success:', returnedId);
+        clearReport();
+        navigate(`/success/${returnedId}`);
       } else {
-         throw new Error('Unexpected response status: ' + response.status);
+        throw new Error(result.error || 'Submission failed');
       }
     } catch (error) {
        console.error('[STEP5] ❌ Error:', error);
-       setErrorMsg(error.response?.data?.message_en || error.message || 'Failed to submit report. Please try again.');
+       setErrorMsg(error.response?.data?.detail || error.message || 'Failed to submit report. Please try again.');
     } finally {
        setIsSubmitting(false);
     }

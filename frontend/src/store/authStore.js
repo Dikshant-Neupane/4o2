@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mockUser } from '../mocks/mockUser';
+import { auth } from '../services/api';
 
 console.log('[PHASE 1] Stores initialized');
 
@@ -7,121 +7,127 @@ const useAuthStore = create((set, get) => ({
   // ----- State -----
   user: null,
   token: localStorage.getItem('jana_sunuwaai_token') || null,
-  isAuthenticated: !!localStorage.getItem('jana_sunuwaai_token'),
+  isAuthenticated: false,
+  isHydrated: false,
   isLoading: false,
   error: null,
 
   // ----- Actions -----
   login: async (email, password) => {
+    console.log('[AUTH] 🔄 Login started...');
     set({ isLoading: true, error: null });
     try {
-      // TODO: Replace with real API call
-      // const res = await axios.post('/api/auth/login', { email, password });
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const res = await auth.login(email, password);
+      const { access_token, user } = res;
 
-      const fakeToken = 'mock_jwt_token_' + Date.now();
-      localStorage.setItem('jana_sunuwaai_token', fakeToken);
+      localStorage.setItem('jana_sunuwaai_token', access_token);
 
       set({
-        user: mockUser,
-        token: fakeToken,
+        user,
+        token: access_token,
         isAuthenticated: true,
+        isHydrated: true,
         isLoading: false,
         error: null,
       });
 
-      return { success: true };
+      console.log('[AUTH] ✅ Login success:', user.email);
+      return { success: true, user };
     } catch (err) {
-      const message = err?.response?.data?.message || 'Login failed';
-      set({ isLoading: false, error: message });
-      return { success: false, error: message };
+      const detail = err.response?.data?.detail;
+      let msg;
+      if (Array.isArray(detail)) {
+        msg = detail.map(e => e.msg).join(', ');
+      } else {
+        msg = detail || err.message || 'Login failed';
+      }
+      console.error('[AUTH] ❌ Login failed:', msg);
+      set({ isLoading: false, error: msg, isAuthenticated: false });
+      return { success: false, error: msg };
     }
   },
 
-  register: async (userData) => {
+  register: async (name, email, password) => {
+    console.log('[AUTH] 🔄 Register started...');
     set({ isLoading: true, error: null });
     try {
-      // TODO: Replace with real API call
-      // const res = await axios.post('/api/auth/register', userData);
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const res = await auth.register(name, email, password);
+      const { access_token, user } = res;
 
-      const fakeToken = 'mock_jwt_token_' + Date.now();
-      localStorage.setItem('jana_sunuwaai_token', fakeToken);
+      localStorage.setItem('jana_sunuwaai_token', access_token);
 
       set({
-        user: { ...mockUser, ...userData },
-        token: fakeToken,
+        user,
+        token: access_token,
         isAuthenticated: true,
+        isHydrated: true,
         isLoading: false,
         error: null,
       });
 
-      return { success: true };
+      console.log('[AUTH] ✅ Register success:', user.email);
+      return { success: true, user };
     } catch (err) {
-      const message = err?.response?.data?.message || 'Registration failed';
-      set({ isLoading: false, error: message });
-      return { success: false, error: message };
+      const detail = err.response?.data?.detail;
+      let msg;
+      if (Array.isArray(detail)) {
+        msg = detail.map(e => e.msg).join(', ');
+      } else {
+        msg = detail || err.message || 'Registration failed';
+      }
+      console.error('[AUTH] ❌ Register failed:', msg);
+      set({ isLoading: false, error: msg, isAuthenticated: false });
+      return { success: false, error: msg };
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('jana_sunuwaai_token');
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      error: null,
-    });
-  },
-
-  updateProfile: async (updates) => {
-    set({ isLoading: true, error: null });
-    try {
-      // TODO: Replace with real API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const currentUser = get().user;
-      set({
-        user: { ...currentUser, ...updates },
-        isLoading: false,
-      });
-
-      return { success: true };
-    } catch (err) {
-      const message = err?.response?.data?.message || 'Update failed';
-      set({ isLoading: false, error: message });
-      return { success: false, error: message };
-    }
-  },
-
-  clearError: () => set({ error: null }),
-
-  // Hydrate user from token on app load
   hydrateUser: async () => {
-    const token = get().token;
-    if (!token) return;
+    const token = localStorage.getItem('jana_sunuwaai_token');
+    if (!token) {
+      console.log('[AUTH] No token found during hydration');
+      set({ isHydrated: true, isAuthenticated: false, token: null });
+      return;
+    }
 
     set({ isLoading: true });
     try {
-      // TODO: Replace with real API call
-      // const res = await axios.get('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
+      console.log('[AUTH] Validating token via /auth/me...');
+      const user = await auth.getMe();
       set({
-        user: mockUser,
+        user,
+        token,
         isAuthenticated: true,
+        isHydrated: true,
         isLoading: false,
       });
-    } catch {
+      console.log('[AUTH] ✅ Hydration success:', user.email);
+    } catch (err) {
+      console.warn('[AUTH] Token validation failed:', err.message);
       localStorage.removeItem('jana_sunuwaai_token');
       set({
         user: null,
         token: null,
         isAuthenticated: false,
+        isHydrated: true,
         isLoading: false,
       });
     }
   },
+
+  logout: () => {
+    console.log('[AUTH] Logging out...');
+    localStorage.removeItem('jana_sunuwaai_token');
+    set({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isHydrated: true,
+      error: null,
+    });
+    console.log('[AUTH] ✅ Logged out');
+  },
+
+  clearError: () => set({ error: null }),
 }));
 
 export default useAuthStore;

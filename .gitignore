@@ -53,6 +53,11 @@ logs/
 test.db
 *.sqlite
 *.sqlite3
+civiceye.db
+
+# Uploaded media
+backend/media/
+media/uploads/
 
 # Large datasets and image files
 Data/

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import Navbar from './components/layout/Navbar';
@@ -36,12 +36,12 @@ function LoadingSpinner() {
 
 // ---------------------------------------------------------------------------
 // RequireAuth — redirects to /login if not authenticated
+// Waits for hydration before making any decisions
 // ---------------------------------------------------------------------------
 function RequireAuth({ children }) {
-  const { isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  const { isAuthenticated, isHydrated } = useAuthStore();
+  if (!isHydrated) return <LoadingSpinner />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 }
 
@@ -54,8 +54,16 @@ function RequireAuth({ children }) {
 // 4. No transform on any wrapper that contains the navbar
 // ---------------------------------------------------------------------------
 export default function App() {
+  const { isHydrated, hydrateUser } = useAuthStore();
+
+  useEffect(() => {
+    hydrateUser();
+  }, [hydrateUser]);
+
+  if (!isHydrated) return <LoadingSpinner />;
+
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {/* ← Navbar lives HERE. Never in any page file. */}
       <Navbar />
 
@@ -114,3 +122,4 @@ export default function App() {
     </Router>
   );
 }
+

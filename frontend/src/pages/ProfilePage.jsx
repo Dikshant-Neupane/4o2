@@ -153,18 +153,29 @@ const ProfilePage = () => {
 
               {/* Profile Card */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 text-center space-y-4">
-                <motion.div
-                  className="mx-auto w-20 h-20 rounded-full bg-[#1B4FD8] flex items-center justify-center text-white text-2xl font-extrabold uppercase"
-                  variants={scaleBounce}
-                  initial={prefersReduced ? false : 'hidden'}
-                  animate="visible"
-                >
-                  {currentUser.name?.split(' ').map(n => n[0]).join('') || 'U'}
-                </motion.div>
+                {currentUser.avatar_url ? (
+                  <motion.img
+                    src={currentUser.avatar_url}
+                    alt={currentUser.name}
+                    className="mx-auto w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                    variants={scaleBounce}
+                    initial={prefersReduced ? false : 'hidden'}
+                    animate="visible"
+                  />
+                ) : (
+                  <motion.div
+                    className="mx-auto w-20 h-20 rounded-full bg-[#1B4FD8] flex items-center justify-center text-white text-2xl font-extrabold uppercase"
+                    variants={scaleBounce}
+                    initial={prefersReduced ? false : 'hidden'}
+                    animate="visible"
+                  >
+                    {currentUser.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  </motion.div>
+                )}
                 <div>
                   <h2 className="font-bold text-lg text-gray-900">{currentUser.name}</h2>
-                  <p className="text-sm text-gray-500">{currentUser.phone || '+977 98XXXXXXXX'}</p>
-                  <p className="text-xs text-gray-400 mt-1">Member since {new Date(currentUser.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                  <p className="text-sm text-gray-500">{currentUser.email || currentUser.phone || ''}</p>
+                  <p className="text-xs text-gray-400 mt-1">Member since {new Date(currentUser.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">

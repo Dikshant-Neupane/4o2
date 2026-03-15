@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 const useAuth = () => {
-  const { user, isLoggedIn, login: storeLogin, logout: storeLogout } = useAuthStore();
+  const {
+    user,
+    isAuthenticated: isLoggedIn,
+    login: storeLogin,
+    register: storeRegister,
+    logout: storeLogout,
+  } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -11,29 +17,32 @@ const useAuth = () => {
   }, []);
 
   const login = async (credentials) => {
-    console.log('[AUTH] Login called');
+    console.log('[AUTH] Login called for:', credentials.email || credentials);
     try {
-      // Since backend is NOT RUNNING, using mock token
-      const token = 'mock_jwt_token_12345';
-      localStorage.setItem('token', token);
-      
-      const mockUser = {
-        id: '1',
-        name: 'Demo Person',
-        email: 'demo@janasunuwaai.local'
-      };
-      
-      storeLogin(mockUser);
-      return true;
+      const result = await storeLogin(
+        credentials.email || credentials,
+        credentials.password || ''
+      );
+      return result.success;
     } catch (error) {
       console.error('Login error', error);
       return false;
     }
   };
 
+  const register = async (userData) => {
+    console.log('[AUTH] Register called for:', userData.email);
+    try {
+      const result = await storeRegister(userData);
+      return result.success;
+    } catch (error) {
+      console.error('Register error', error);
+      return false;
+    }
+  };
+
   const logout = () => {
     console.log('[AUTH] Logout called');
-    localStorage.removeItem('token');
     storeLogout();
     navigate('/');
   };
@@ -51,6 +60,7 @@ const useAuth = () => {
     user,
     isLoggedIn,
     login,
+    register,
     logout,
     requireAuth,
   };
