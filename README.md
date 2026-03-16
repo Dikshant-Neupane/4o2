@@ -21,7 +21,7 @@ Check out the latest system walkthrough and AI pothole detection demo (Local Fil
 
 ### 📄 Assessment Reports
 Detailed analysis and technical documentation of the system's performance:
-- **PDF:** [Reports.pdf](file:///Reports.pdf)
+- **PDF:** [Reports.pdf](./Reports.pdf)
 
 ## 🛠️ Technology Stack
 
