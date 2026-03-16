@@ -13,6 +13,16 @@ Jana Sunuwaai is an intelligent, full-stack web application designed to streamli
 - **High-Performance Architecture:** Utilizes FastAPI for high-throughput REST APIs, completely decoupled from expensive ML inferences via **Celery & Redis** message queues.
 - **Secure Access Control:** Fully integrated Email/Password Authentication Flow using JWT tokens and bcrypt encrypted credentials.
 
+## 🎥 Project Media & Documentation
+
+### 📺 System Demo
+Check out the latest system walkthrough and AI pothole detection demo (Local File):
+- **Video:** [4o2.mp4](./4o2.mp4)
+
+### 📄 Assessment Reports
+Detailed analysis and technical documentation of the system's performance:
+- **PDF:** [Reports.pdf](file:///Reports.pdf)
+
 ## 🛠️ Technology Stack
 
 ### Frontend
