@@ -16,7 +16,6 @@ import SeverityBadge from '../components/ui/SeverityBadge';
 import StatusBadge from '../components/ui/StatusBadge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import useAuthStore from '../store/authStore';
-import { reports as reportsApi, votes as votesApi, comments as commentsApi } from '../services/api';
 import { mockReports } from '../mocks/mockReports';
 import {
   pageVariants, fadeUp, staggerContainer, cardVariants, buttonSpring,
@@ -146,7 +145,7 @@ const ReportDetail = () => {
   const severity = (report.ai_severity || 'medium').toUpperCase();
   const shortId = String(report.id).substring(0, 8).toUpperCase();
   const shareUrl = window.location.href;
-  const imageUrl = report.images?.[0] || report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800';
+  const imageUrl = report.images?.[0] || report.image || '/Waterleak.png';
 
   const timelineSteps = [
     { label: 'Submitted', icon: CheckCircle2, date: report.created_at, done: true },

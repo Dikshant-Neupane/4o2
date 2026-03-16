@@ -7,10 +7,10 @@ const AboutPage = () => {
   const prefersReduced = useReducedMotionSafe();
 
   const team = [
-    { id: 1, color: 'bg-[#1B4FD8]', initials: 'B1', name: 'Sanjay Subedi', role: 'Backend Lead', bio: 'API & database architecture' },
-    { id: 2, color: 'bg-[#0F6E56]', initials: 'B2', name: 'Priya Thapa', role: 'AI Engineer', bio: 'AI pipeline & model training' },
-    { id: 3, color: 'bg-[#854F0B]', initials: 'F1', name: 'Rohan KC', role: 'Frontend Lead', bio: 'Report wizard & user flow' },
-    { id: 4, color: 'bg-[#534AB7]', initials: 'F2', name: 'Nisha Gurung', role: 'UI Developer', bio: 'Community feed & maps' },
+    { id: 1, color: 'bg-[#1B4FD8]', initials: 'B1', name: 'Anushtha Lamichhane', role: 'Backend Lead', bio: 'API & database architecture' },
+    { id: 2, color: 'bg-[#0F6E56]', initials: 'B2', name: 'Dikshnat Neupane', role: 'AI Engineer', bio: 'AI pipeline & model training' },
+    { id: 3, color: 'bg-[#854F0B]', initials: 'F1', name: 'Bibek Magar', role: 'Frontend Lead', bio: 'Report wizard & user flow' },
+    { id: 4, color: 'bg-[#534AB7]', initials: 'F2', name: 'Swastik Rawat', role: 'UI Developer', bio: 'Community feed & maps' },
   ];
 
   const techStack = [

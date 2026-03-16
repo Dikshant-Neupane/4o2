@@ -83,3 +83,6 @@ Thumbs.db
 # Node (if frontend has node_modules)
 node_modules/
 npm-debug.log
+
+# Large media files
+4o2.mp4

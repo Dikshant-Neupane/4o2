@@ -1,3 +1,4 @@
+
 export const mockReports = [
   {
     id: 1,
@@ -52,7 +53,7 @@ export const mockReports = [
       ward: 'Ward 26',
     },
     images: [
-      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600',
+      '/brokenlight.png',
     ],
     status: 'in-progress',
     upvotes: 31,
@@ -90,9 +91,7 @@ export const mockReports = [
       address: 'Pulchowk Road, Lalitpur',
       ward: 'Ward 11',
     },
-    images: [
-      'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=600',
-    ],
+    images: ['/Waterleak.png'],
     status: 'submitted',
     upvotes: 23,
     comment_count: 5,
@@ -169,7 +168,7 @@ export const mockReports = [
       ward: 'Ward 18',
     },
     images: [
-      'https://images.unsplash.com/photo-1588858679076-810085400e31?w=600',
+      '/Waterleak.png',
     ],
     status: 'resolved',
     upvotes: 18,
@@ -208,7 +207,7 @@ export const mockReports = [
       ward: 'Ward 28',
     },
     images: [
-      'https://images.unsplash.com/photo-1598128558393-70ff21f8be44?w=600',
+      '/Waterleak.png',
     ],
     status: 'rejected',
     upvotes: 9,

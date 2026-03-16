@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting {} v{}", settings.app_name, settings.app_version)
     init_db()
     logger.info("Database tables created / verified")
-    print("[PHASE 2] ✅ Tables created in civiceye.db")
+    print("[PHASE 2] Tables created in civiceye.db")
 
     # Phase 3: seed departments
     from app.utils.seed import seed_departments
@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    print("[PHASE 10] ✅ All routes registered: auth, departments, reports, websocket")
+    print("[PHASE 10] All routes registered: auth, departments, reports, websocket")
     yield
     # Shutdown
     logger.info("Shutting down …")

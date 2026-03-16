@@ -164,7 +164,7 @@ const MapPage = () => {
                 {/* Header/Image Area */}
                 <div className="relative h-48 shrink-0 bg-gray-200">
                   <img
-                    src={selectedReport.images?.[0] || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600'}
+                    src={selectedReport.images?.[0] || '/Waterleak.png'}
                     alt="Report thumbnail"
                     className="w-full h-full object-cover"
                   />

@@ -7,7 +7,7 @@ import StatusBadge from '../ui/StatusBadge';
 const ReportListItem = ({ report }) => {
   if (!report) return null;
 
-  const imageUrl = report.images?.[0] || report.image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=200';
+  const imageUrl = report.images?.[0] || report.image || '/Waterleak.png';
   const severity = (report.ai_severity || 'medium').toUpperCase();
   const status = (report.status || 'submitted').toUpperCase().replace('-', '_');
   const address = report.location?.address || 'Kathmandu';

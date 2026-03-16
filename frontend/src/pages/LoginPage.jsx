@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Loader2, ShieldCheck, Mail, Lock, UserPlus, LogIn, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import logo from "../pictures/logofolder/logo.png";
+
 
 import useAuthStore from '../store/authStore';
 import {
@@ -86,7 +86,7 @@ const LoginPage = () => {
       >
         <div className="text-center mb-8">
           <img
-            src={logo}
+            src="/pictures/logofolder/logo.png"
             alt="Jana Sunuwaai"
             className="h-24 mx-auto mb-6 object-contain"
           />

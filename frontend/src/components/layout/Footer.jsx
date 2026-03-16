@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Twitter, Mail } from 'lucide-react';
-import logo from "../../pictures/logofolder/logo.png";
 
 const Footer = () => {
   useEffect(() => {
@@ -15,7 +14,7 @@ const Footer = () => {
           <div className="space-y-4 xl:col-span-1">
             <Link to="/" className="flex items-center gap-2">
               <img
-                src={logo}
+                src="/pictures/logofolder/logo.png"
                 alt="Jana Sunuwaai"
                 style={{
                   height: "120px",

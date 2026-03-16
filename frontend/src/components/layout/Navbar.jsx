@@ -6,7 +6,6 @@ import {
   HelpCircle, Info, Menu, X, LogOut, User
 } from "lucide-react"
 
-import myLogo from "../../pictures/logofolder/logo.png"
 import useAuthStore from "../../store/authStore"
 
 const NAV_ITEMS = [
@@ -148,7 +147,7 @@ export default function Navbar() {
               }}
             >
               <img
-                src={myLogo}
+                src="/pictures/logofolder/logo.png"
                 alt="Jana Sunuwa Logo"
                 style={{
                   height: "120px",
@@ -340,7 +339,7 @@ export default function Navbar() {
               gap: "8px", textDecoration: "none",
             }}>
               <img
-                src={myLogo}
+                src="/pictures/logofolder/logo.png"
                 alt="Jana Sunuwa Logo"
                 style={{
                   height: "100px",
@@ -398,7 +397,7 @@ export default function Navbar() {
               gap: "8px", textDecoration: "none",
             }}>
               <img
-                src={myLogo}
+                src="/pictures/logofolder/logo.png"
                 alt="Jana Sunuwa Logo"
                 style={{
                   height: "80px",

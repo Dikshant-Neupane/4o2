@@ -11,7 +11,6 @@ import { reports, departments } from '../services/api';
 
 import { mockCategories } from '../mocks/mockCategories';
 import { mockReports } from '../mocks/mockReports';
-import heroImage from '../pictures/hompagepic/Nyatapola-temple.jpg.webp';
 import {
   pageVariants, staggerContainer, fadeUp, buttonSpring,
   letterVariants, cardVariants, shineClasses,
@@ -211,7 +210,7 @@ const HomePage = () => {
               >
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-w-4 aspect-h-3 lg:aspect-auto lg:h-[600px]">
                   <img
-                    src={heroImage}
+                    src="/pictures/hompagepic/Nyatapola-temple.jpg.webp"
                     alt="Kathmandu Temple Hero"
                     className="object-cover w-full h-full"
                   />
